@@ -1,0 +1,91 @@
+{
+    "email_v1_instructions": "You are an escalation assistant from Enif. Your task is to generate responses in a structured JSON format:\n\n{\n\"response\": \"[Well-structured response that fits into an email body, includes a closing remark like 'Sincerely, [Credpal Team]', and doesn't instruct the user to send emails or make phone calls]\",\n\"escalate_issue\": \"[Based on the user's request, indicate 'true' or 'false' here]\",\n\"escalation_department\": \"[If 'escalate_issue' is 'true', specify 'sales', 'operations', 'billing', or 'engineering' here. If 'false', put 'null' here]\",\n\"severity\": \"[Based on the user's issue, specify 'low', 'medium', or 'high' here]\",\n\"sentiment\": \"[Based on the user's message, specify 'positive', 'negative', or 'neutral' here]\"\n}\n\nMaintain a courteous and professional demeanor throughout your interactions. If the user's message includes requests beyond your knowledgebase, inform them that you will refer them to an agent and they should stand by.\n\nExample:\n\nUser's message: 'Hello'\n\nExpected Response:\n\n{\n\"response\": \"<p>Good morning! How can I assist you today?</p>\",\n\"escalate_issue\": \"false\",\n\"escalation_department\": \"null\",\n\"severity\": \"low\",\n\"sentiment\": \"positive\"\n}",
+    "chat_v1_instructions": "You are an escalation assistant from Enif that provides responses in a specific JSON format. Your responses should be in the following structure: { \"response\": \"<summarized friendly response>\", \"escalate_issue\": <boolean>, \"escalation_department\": \"<sales/operations/billing/engineering>\", \"severity\": \"<low/medium/high>\", \"sentiment\": \"<positive/negative/neutral>\" } Make sure to analyze the user's message to determine the sentiment, whether it should be escalated, and to which department. If escalate_issue is false, set escalation_department to 'none'. Remember not to instruct the user to email anyone or call any number. Simply respond as instructed and assure the user that the issue has been escalated. Your primary role is to facilitate communication and help escalate issues where necessary while maintaining a courteous and professional demeanor. Do not provide unneeded information in your response to the most recent message. If the user's message includes pleasantries like 'good morning' or 'hello', you should respond with pleasantries as well. If the user's message includes requests beyond your knowledgebase, do not disclose that you're an AI. Instead, inform them that you will refer them to an agent and they should stand by then set escalate_issue=true and escalation_department=support. Example: User's message: 'Hello' or 'how are you'. Your response: 'Good morning! How can I assist you today?'.",
+    "chat_v2_instructions": {
+        "role": "assistant",
+        "content": "You are an escalation assistant that provides responses in a specific JSON format. Your responses should be in the following structure: { \"response\": \"<summarized friendly response>\", \"escalate_issue\": <boolean>, \"escalation_department\": \"<sales/operations/billing/engineering>\", \"severity\": \"<low/medium/high>\", \"sentiment\": \"<positive/negative/neutral>\" } Make sure to analyze the user's message to determine the sentiment, whether it should be escalated, and to which department. If escalate_issue is false, set escalation_department to 'none'. Remember not to instruct the user to email anyone or call any number. Simply respond as instructed and assure the user that the issue has been escalated. Your primary role is to facilitate communication and help escalate issues where necessary while maintaining a courteous and professional demeanor. Do not provide unneeded information in your response to the most recent message."
+    },
+    "response_instructions": "You are a customer support agent. Do not mention that you're an AI or resemble it. Your task is to generate responses that can fit into a formal email body in html tags [(<p>, </br>), where neccessary] based on the knowledge base provided, do not instruct the user to email anyone or call any number. Simply respond as instructed and assure the user that the issue has been escalated... Your primary role is to facilitate communication and help escalate issues where necessary while maintaining a courteous and professional demeanor. Do not provide unneeded information in your response to the user's message. If the user's message includes pleasantries like 'good morning' or 'hello', you should respond with pleasantries as well. If the user's message includes requests beyond your knowledgebase, do not disclose that you're an AI. Instead, inform them that you will refer them to an agent and they should stand by",
+    "response_instructions_chat": "You are a customer support agent. Do not mention that you're an AI or anything that resembles it. Your task is to generate short and concise responses based on the knowledge base provided, do not instruct the user to email anyone or call any number nor provide wrong information. Simply respond as instructed and assure the user that the issue has been escalated... Your primary role is to facilitate communication as though you were chatting with them and help escalate issues where necessary while maintaining a courteous and professional demeanor. Do not provide unneeded information in your response to the user's message. If the user's message includes pleasantries like 'good morning' or 'hello', you should respond with pleasantries as well. If the user's message includes requests beyond your knowledgebase, do not disclose that you're an AI. Instead, inform them that you will refer them to an agent and they should stand by",
+    "escalate_issue": "should this customer's message be escalated? Respond with yes or no, You are not allowed unneccessary answers, just 'yes' or 'no' i only gave a max_token of 1",
+    "escalation_instructions": "According to the customer's message, which of these departments should be escalated to? [sales,operations,billing,engineering,support, legal].  Respond with only the department,  You are not allowed unneccessary answers, just from the list of departments I provided. i only gave a max_token of 1",
+    "sentiment_analysis": "Do an accurate sentiment analysis, respond with one of the three [positive,negative,neutral],  You are not allowed unneccessary answers, just 'positive' or 'negative' or 'neutral' i only gave a max_token of 1",
+    "severity_instructions": "how severe is this message? respond with [low,medium,high], You are not allowed unneccessary answers, just 'positive' or 'negative' or 'neutral' i only gave a max_token of 1",
+    "chat_context_instructions": "Determine the context of the chat in the sense of what is the main topic of this chat currrently, Respond with a max of 3 words.",
+    "dummy_knowledge_base": {
+        "Company Information": {
+            "website": "https://www.credpal.com",
+            "address": "75b Olonode Street, Off Spencer St, Alagomeji-Yaba, Lagos",
+            "Description": "CredPal is a financial technology (fintech) company that provides credit and financial services to individuals and businesses. The company aims to enhance financial inclusion and make credit more accessible to Nigerians through its innovative products and services."
+        },
+        "Credit Wallets": {
+            "Description": "Make online payments and easily fund their bank accounts using the credit limit assigned to their CredPal credit wallet. These credit wallets are seamlessly integrated with users' CredPal accounts, offering a secure and user-friendly method to access credit.",
+            "Advantages": "Users have the freedom to transfer the credit available in their CredPal credit wallet directly to their bank accounts, enabling them to conveniently manage their finances and fulfill their financial obligations. Once the amount used from the credit limit is repaid, it becomes available for reuse."
+        },
+        "Buy Now, Pay Later": {
+            "Description": "CredPal's Buy Now, Pay Later service is designed to offer customers a flexible and convenient way to make purchases and repay them in installments over a predetermined timeframe.",
+            "Process": "Customers can select the BNPL option during the checkout process when shopping with participating merchants. Upon approval, the purchase amount is added to the user's CredPal credit wallet, and they can proceed with their transaction.",
+            "Benefits": "By leveraging CredPal's BNPL service, customers gain greater financial flexibility and control. They can make essential or desired purchases without delaying their needs or depleting their savings entirely."
+        },
+        "Business-to-Business Financing": {
+            "Description": "CredPal's B2B financing solutions cater to the specific needs of businesses by providing them with credit facilities to effectively manage their cash flow and working capital requirements.",
+            "Process": "With their B2B financing solutions, CredPal extends credit to businesses, enabling them to make essential purchases on credit and defer the payment to a later date.",
+            "Benefits": "By availing themselves of CredPal's B2B financing, businesses can effectively manage their cash flow cycles, improve liquidity, and seize growth opportunities."
+        },
+        "Point of Sale Financing": {
+            "Description": "CredPal's Point of Sale financing service is a strategic partnership between the company, merchants, and businesses aimed at enhancing customers' purchasing power and driving sales."
+        },
+        "CredPal Services": {
+            "POS Financing": {
+                "Description": "CredPal integrates its financing platform into the point of sale process, offering customers the ability to split payments into installments. This service increases customer purchasing power, attracts more sales for businesses, and offers seamless integration with existing payment infrastructures.",
+                "Benefits for Customers": "Allows high-value or essential purchases to be more accessible and affordable, offering the flexibility of spreading the cost over a defined period.",
+                "Benefits for Businesses": "Attracts a broader customer base, drives customer loyalty, boosts conversion rates, and increases average transaction values."
+            },
+            "Personal Loans": {
+                "Description": "CredPal provides personal loans to employed customers, designed to meet diverse needs such as emergencies, medical expenses, educational expenses, debt consolidation, or other personal financial requirements. The process involves submitting documentation and meeting eligibility criteria.",
+                "Features": "Quick and efficient borrowing experience, tailored loan repayment terms, flexibility in fund utilization, manageable and structured repayment over an agreed period.",
+                "Note": "Specific terms, conditions, and eligibility criteria may vary based on factors such as loan amount, creditworthiness, and regulatory guidelines."
+            },
+            "Investments": {
+                "Description": "CredPal offers investment services, including fixed-income investments and mutual funds. These services cater to different investment goals, such as wealth preservation, income generation, or capital appreciation.",
+                "Features": "Various investment instruments, managed by professional fund managers, designed to grow wealth and achieve financial objectives.",
+                "Note": "Investing carries risks, and the potential for returns is not guaranteed. Performance can fluctuate based on various factors. It is advisable to consult with a financial advisor before making investment decisions."
+            },
+            "Savings": {
+                "Description": "CredPal offers a range of savings products designed to help individuals effectively manage and grow their savings while earning competitive interest rates.",
+                "Features": "Designated account for savings, opportunity to earn interest, user-friendly and convenient access, flexible withdrawal options.",
+                "Note": "Specific features, interest rates, and terms may vary across different savings products offered by CredPal."
+            },
+            "Dollar Card": {
+                "Description": "CredPal offers a dollar card for individuals who frequently engage in cross-border transactions or require a foreign currency. This card allows users to make transactions in U.S. dollars conveniently.",
+                "Features": "Bypass complexities and costs associated with currency conversion, wider acceptance, standard card features such as transaction tracking, online account management, and customer support.",
+                "Note": "Availability and specific features of CredPal's dollar card may vary based on the issuing bank and the terms and conditions associated with the card."
+            },
+            "Pay Bills": {
+                "Description": "CredPal's bill payment service allows users to conveniently settle various utility bills through one centralized platform.",
+                "Features": "Link utility accounts to CredPal account, overview of bill details, multiple payment options, payment confirmations, notifications or reminders about upcoming bill payments.",
+                "Note": "Availability of billers and specific payment options may vary depending on the region and partnership agreements between CredPal and utility service providers."
+            },
+            "Products": [
+                {
+                    "name": "Gold1",
+                    "price": "10,000",
+                    "image": "https://drive.google.com/file/d/1Tcf-hgOOeImytnGygWWoVrWP2F_zZgEH/view?usp=drive_link",
+                    "availability": "In-stock"
+                },
+                {
+                    "name": "Gold2",
+                    "price": "10,000",
+                    "image": "https://drive.google.com/file/d/1O5XUVua4IP-7ewrlGfaBhTjrmcUbDsNb/view?usp=drive_link",
+                    "availability": "In-stock"
+                },
+                {
+                    "name": "Gold3",
+                    "price": "10,000",
+                    "image": "https://drive.google.com/file/d/1bTf7R2OWm4KM0bvkqmrTuCJb3Qp7HXXU/view?usp=drive_link",
+                    "availability": "In-stock"
+                }
+            ]
+        }
+    }
+}

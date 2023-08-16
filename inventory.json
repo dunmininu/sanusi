@@ -1,0 +1,525 @@
+{
+    "categories": [
+        {
+            "name": "Electronics"
+        },
+        {
+            "name": "Clothing"
+        },
+        {
+            "name": "Home Appliances"
+        },
+        {
+            "name": "Books"
+        },
+        {
+            "name": "Sports"
+        },
+        {
+            "name": "Beauty"
+        },
+        {
+            "name": "Furniture"
+        },
+        {
+            "name": "Toys"
+        },
+        {
+            "name": "Groceries"
+        },
+        {
+            "name": "Fitness"
+        },
+        {
+            "name": "Garden"
+        },
+        {
+            "name": "Music"
+        },
+        {
+            "name": "Jewelry"
+        },
+        {
+            "name": "Stationery"
+        },
+        {
+            "name": "Pets"
+        }
+    ],
+    "products": [
+        {
+            "category_id": 1,
+            "name": "Smartphone",
+            "description": "A powerful smartphone with advanced features.",
+            "price": "599.99",
+            "stock_quantity": 100,
+            "image": null
+        },
+        {
+            "category_id": 2,
+            "name": "T-shirt",
+            "description": "Comfortable cotton T-shirt for casual wear.",
+            "price": "19.99",
+            "stock_quantity": 50,
+            "image": null
+        },
+        {
+            "category_id": 3,
+            "name": "Blender",
+            "description": "High-speed blender for smoothies and food preparation.",
+            "price": "89.99",
+            "stock_quantity": 25,
+            "image": null
+        },
+        {
+            "category_id": 4,
+            "name": "Mystery Novel",
+            "description": "Engaging mystery novel that keeps you on the edge.",
+            "price": "12.99",
+            "stock_quantity": 30,
+            "image": null
+        },
+        {
+            "category_id": 5,
+            "name": "Soccer Ball",
+            "description": "Durable soccer ball for practice and matches.",
+            "price": "24.99",
+            "stock_quantity": 20,
+            "image": null
+        },
+        {
+            "category_id": 6,
+            "name": "Lipstick",
+            "description": "Vibrant lipstick for a stunning look.",
+            "price": "14.99",
+            "stock_quantity": 50,
+            "image": null
+        },
+        {
+            "category_id": 7,
+            "name": "Coffee Table",
+            "description": "Stylish coffee table for your living room.",
+            "price": "129.99",
+            "stock_quantity": 20,
+            "image": null
+        },
+        {
+            "category_id": 8,
+            "name": "Building Blocks",
+            "description": "Educational building blocks for creative play.",
+            "price": "29.99",
+            "stock_quantity": 40,
+            "image": null
+        },
+        {
+            "category_id": 9,
+            "name": "Rice",
+            "description": "High-quality rice for your daily meals.",
+            "price": "8.49",
+            "stock_quantity": 100,
+            "image": null
+        },
+        {
+            "category_id": 10,
+            "name": "Yoga Mat",
+            "description": "Premium yoga mat for comfortable workouts.",
+            "price": "39.99",
+            "stock_quantity": 15,
+            "image": null
+        },
+        {
+            "category_id": 11,
+            "name": "Garden Hose",
+            "description": "Durable garden hose for watering plants.",
+            "price": "29.99",
+            "stock_quantity": 30,
+            "image": null
+        },
+        {
+            "category_id": 12,
+            "name": "Acoustic Guitar",
+            "description": "High-quality acoustic guitar for music enthusiasts.",
+            "price": "349.99",
+            "stock_quantity": 15,
+            "image": null
+        },
+        {
+            "category_id": 13,
+            "name": "Silver Necklace",
+            "description": "Elegant silver necklace for a touch of class.",
+            "price": "89.99",
+            "stock_quantity": 10,
+            "image": null
+        },
+        {
+            "category_id": 14,
+            "name": "Notebook Set",
+            "description": "Set of stylish notebooks for all your notes.",
+            "price": "15.99",
+            "stock_quantity": 40,
+            "image": null
+        },
+        {
+            "category_id": 15,
+            "name": "Dog Collar",
+            "description": "Comfortable dog collar for your furry friend.",
+            "price": "12.49",
+            "stock_quantity": 25,
+            "image": null
+        },
+        {
+            "category_id": 15,
+            "name": "Cat Bed",
+            "description": "Cozy cat bed for your feline friend.",
+            "price": "24.99",
+            "stock_quantity": 20,
+            "image": null
+        },
+        {
+            "category_id": 15,
+            "name": "Dog Toy",
+            "description": "Interactive dog toy for hours of play.",
+            "price": "9.99",
+            "stock_quantity": 35,
+            "image": null
+        },
+        {
+            "category_id": 15,
+            "name": "Fish Tank",
+            "description": "Aquarium fish tank for aquatic pets.",
+            "price": "59.99",
+            "stock_quantity": 10,
+            "image": null
+        },
+        {
+            "category_id": 15,
+            "name": "Bird Feeder",
+            "description": "Feeder for attracting birds to your garden.",
+            "price": "14.49",
+            "stock_quantity": 25,
+            "image": null
+        },
+        {
+            "category_id": 12,
+            "name": "Electric Guitar",
+            "description": "Premium electric guitar for professional musicians.",
+            "price": "799.99",
+            "stock_quantity": 7,
+            "image": null
+        },
+        {
+            "category_id": 12,
+            "name": "Headphones",
+            "description": "High-quality headphones for immersive music experience.",
+            "price": "149.99",
+            "stock_quantity": 15,
+            "image": null
+        },
+        {
+            "category_id": 12,
+            "name": "Piano Keyboard",
+            "description": "Digital piano keyboard for learning and creating music.",
+            "price": "329.99",
+            "stock_quantity": 12,
+            "image": null
+        },
+        {
+            "category_id": 12,
+            "name": "Sheet Music Book",
+            "description": "Collection of classic music scores for pianists.",
+            "price": "19.99",
+            "stock_quantity": 20,
+            "image": null
+        },
+        {
+            "category_id": 13,
+            "name": "Diamond Earrings",
+            "description": "Elegant diamond earrings for special occasions.",
+            "price": "499.99",
+            "stock_quantity": 5,
+            "image": null
+        },
+        {
+            "category_id": 13,
+            "name": "Gold Bracelet",
+            "description": "Charming gold bracelet to adorn your wrist.",
+            "price": "329.99",
+            "stock_quantity": 8,
+            "image": null
+        },
+        {
+            "category_id": 13,
+            "name": "Pearl Necklace",
+            "description": "Classic pearl necklace for timeless beauty.",
+            "price": "299.99",
+            "stock_quantity": 10,
+            "image": null
+        },
+        {
+            "category_id": 13,
+            "name": "Gemstone Ring",
+            "description": "Exquisite gemstone ring for a touch of color.",
+            "price": "199.99",
+            "stock_quantity": 15,
+            "image": null
+        },
+        {
+            "category_id": 6,
+            "name": "Mascara",
+            "description": "Volumizing mascara for stunning lashes.",
+            "price": "12.99",
+            "stock_quantity": 30,
+            "image": null
+        },
+        {
+            "category_id": 6,
+            "name": "Lip Gloss",
+            "description": "Shiny lip gloss for a radiant smile.",
+            "price": "8.99",
+            "stock_quantity": 40,
+            "image": null
+        },
+        {
+            "category_id": 6,
+            "name": "Face Cream",
+            "description": "Hydrating face cream for smooth skin.",
+            "price": "6.99",
+            "stock_quantity": 25,
+            "image": null
+        },
+        {
+            "category_id": 6,
+            "name": "Eyeshadow Palette",
+            "description": "Versatile eyeshadow palette for various looks.",
+            "price": "29.99",
+            "stock_quantity": 18,
+            "image": null
+        },
+        {
+            "category_id": 8,
+            "name": "Building Blocks Set",
+            "description": "Large set of building blocks for creative play.",
+            "price": "49.99",
+            "stock_quantity": 10,
+            "image": null
+        },
+        {
+            "category_id": 8,
+            "name": "Remote Control Car",
+            "description": "Fun remote control car for outdoor adventures.",
+            "price": "34.99",
+            "stock_quantity": 15,
+            "image": null
+        },
+        {
+            "category_id": 8,
+            "name": "Dollhouse",
+            "description": "Beautiful dollhouse for imaginative storytelling.",
+            "price": "69.99",
+            "stock_quantity": 8,
+            "image": null
+        },
+        {
+            "category_id": 8,
+            "name": "Art Supplies Set",
+            "description": "Comprehensive set of art supplies for young artists.",
+            "price": "29.99",
+            "stock_quantity": 20,
+            "image": null
+        },
+        {
+            "category_id": 10,
+            "name": "Yoga Mat Towel",
+            "description": "Absorbent yoga mat towel for hot yoga sessions.",
+            "price": "19.99",
+            "stock_quantity": 25,
+            "image": null
+        },
+        {
+            "category_id": 10,
+            "name": "Resistance Bands Set",
+            "description": "Set of resistance bands for versatile workouts.",
+            "price": "24.99",
+            "stock_quantity": 30,
+            "image": null
+        },
+        {
+            "category_id": 10,
+            "name": "Jump Rope",
+            "description": "Durable jump rope for cardio exercises.",
+            "price": "9.99",
+            "stock_quantity": 40,
+            "image": null
+        },
+        {
+            "category_id": 10,
+            "name": "Exercise Ball",
+            "description": "Stability exercise ball for core workouts.",
+            "price": "14.99",
+            "stock_quantity": 20,
+            "image": null
+        }
+    ],
+    "inventory": [
+        {
+            "product_id": 1,
+            "quantity": 50
+        },
+        {
+            "product_id": 2,
+            "quantity": 25
+        },
+        {
+            "product_id": 3,
+            "quantity": 10
+        },
+        {
+            "product_id": 4,
+            "quantity": 15
+        },
+        {
+            "product_id": 5,
+            "quantity": 5
+        },
+        {
+            "product_id": 6,
+            "quantity": 35
+        },
+        {
+            "product_id": 7,
+            "quantity": 10
+        },
+        {
+            "product_id": 8,
+            "quantity": 20
+        },
+        {
+            "product_id": 9,
+            "quantity": 75
+        },
+        {
+            "product_id": 10,
+            "quantity": 7
+        },
+        {
+            "product_id": 11,
+            "quantity": 25
+        },
+        {
+            "product_id": 12,
+            "quantity": 8
+        },
+        {
+            "product_id": 13,
+            "quantity": 5
+        },
+        {
+            "product_id": 14,
+            "quantity": 30
+        },
+        {
+            "product_id": 15,
+            "quantity": 18
+        },
+        {
+            "product_id": 16,
+            "quantity": 15
+        },
+        {
+            "product_id": 17,
+            "quantity": 30
+        },
+        {
+            "product_id": 18,
+            "quantity": 8
+        },
+        {
+            "product_id": 19,
+            "quantity": 20
+        },
+        {
+            "product_id": 20,
+            "quantity": 6
+        },
+        {
+            "product_id": 21,
+            "quantity": 4
+        },
+        {
+            "product_id": 22,
+            "quantity": 18
+        },
+        {
+            "product_id": 23,
+            "quantity": 12
+        },
+        {
+            "product_id": 24,
+            "quantity": 3
+        },
+        {
+            "product_id": 25,
+            "quantity": 15
+        },
+        {
+            "product_id": 26,
+            "quantity": 18
+        },
+        {
+            "product_id": 27,
+            "quantity": 10
+        },
+        {
+            "product_id": 28,
+            "quantity": 25
+        },
+        {
+            "product_id": 29,
+            "quantity": 35
+        },
+        {
+            "product_id": 30,
+            "quantity": 12
+        },
+        {
+            "product_id": 31,
+            "quantity": 30
+        },
+        {
+            "product_id": 32,
+            "quantity": 8
+        },
+        {
+            "product_id": 33,
+            "quantity": 22
+        },
+        {
+            "product_id": 34,
+            "quantity": 25
+        },
+        {
+            "product_id": 35,
+            "quantity": 15
+        },
+        {
+            "product_id": 36,
+            "quantity": 20
+        },
+        {
+            "product_id": 37,
+            "quantity": 28
+        },
+        {
+            "product_id": 38,
+            "quantity": 40
+        },
+        {
+            "product_id": 39,
+            "quantity": 18
+        },
+        {
+            "product_id": 40,
+            "quantity": 25
+        }
+    ]
+}
