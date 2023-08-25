@@ -20,7 +20,7 @@ from drf_yasg import openapi
 from llama_index import GPTVectorStoreIndex
 from llama_index.data_structs.node import Node
 
-from jarvis.analysis.entity_recognition import extract_topics
+from sanusi.analysis.entity_recognition import extract_topics
 
 from .models import Chat, ChatStatus, Message, Customer
 from .serializers import (
@@ -35,7 +35,7 @@ from .serializers import (
 )
 from .models import Chat, Message, Customer, SENDER_CHOICES
 
-from jarvis.views import (
+from sanusi.views import (
     generate_response,
     generate_response_chat,
     generate_response_chat_v2,
@@ -45,8 +45,8 @@ from jarvis.views import (
     structure_response,
 )
 from business.models import Business, Category, KnowledgeBase, Product
-from jarvis.models import Message as jarvis_message
-from jarvis.utils import (
+from sanusi.models import Message as sanusi_message
+from sanusi.utils import (
     is_valid_format,
     parse_answer_with_regex,
     parse_json_from_answer,
@@ -61,7 +61,7 @@ instructions_for_auto_response = "Return your response as each of these paramete
 logger = logging.getLogger(__name__)
 
 # Open the JSON file and read its contents
-with open("jarvis/instructions.json") as json_file:
+with open("sanusi/instructions.json") as json_file:
     json_data = json.load(json_file)
 
 # Access the values in the dictionary
@@ -303,7 +303,7 @@ class ChatViewSet(viewsets.GenericViewSet):
         methods=["post"],
         url_path="(?P<business_id>[^/]+)/(?P<chat_identifier>[^/.]+)/toggle-chat-status",
     )
-    def toggle_jarvis(self, request, business_id, chat_identifier):
+    def toggle_sanusi(self, request, business_id, chat_identifier):
         try:
             business = get_object_or_404(Business, company_id=business_id)
         except Http404:
@@ -324,7 +324,7 @@ class ChatViewSet(viewsets.GenericViewSet):
             chat.save()
 
         return Response(
-            {"message": f"Jarvis auto response is {chat.is_auto_response}"},
+            {"message": f"sanusi auto response is {chat.is_auto_response}"},
             status=status.HTTP_202_ACCEPTED,
         )
 
@@ -397,13 +397,13 @@ class ChatViewSet(viewsets.GenericViewSet):
         all_messages = (
             Message.objects.filter(chat=chat)
             .order_by("-sent_time")
-            .values_list("jarvis_response", "content")[:10]
+            .values_list("sanusi_response", "content")[:10]
         )
         result = list(all_messages)
-        jarvis_response = [item[0] for item in result if item[0] is not None]
+        sanusi_response = [item[0] for item in result if item[0] is not None]
         content = [item[1] for item in result if item[1] is not None]
 
-        jarvis_response_str = ", ".join(jarvis_response)
+        sanusi_response_str = ", ".join(sanusi_response)
         content_str = ", ".join(content)
         last_message = Message.objects.filter(chat=chat, sender="customer")[:2]
         # Build the prompt
@@ -431,7 +431,7 @@ class ChatViewSet(viewsets.GenericViewSet):
                 severity="medium",
                 sentiment="neutral",
             )
-            jarvis_message.objects.create(chat_session=structured_response)
+            sanusi_message.objects.create(chat_session=structured_response)
             return Response(structured_response, status=status.HTTP_200_OK)
 
         if channel == "email_v1" or channel == "email":
@@ -446,7 +446,7 @@ class ChatViewSet(viewsets.GenericViewSet):
                 },
                 {
                     "role": "system",
-                    "content": f"User's previous messages for reflection: {last_message.content if last_message else ''} and your last response was: {last_message.jarvis_response if last_message else ' '} and user's name is {customer_name}",
+                    "content": f"User's previous messages for reflection: {last_message.content if last_message else ''} and your last response was: {last_message.sanusi_response if last_message else ' '} and user's name is {customer_name}",
                 },
                 {"role": "user", "content": f"{message}"},
             ]
@@ -506,7 +506,7 @@ class ChatViewSet(viewsets.GenericViewSet):
                 },
                 {
                     "role": "assistant",
-                    "content": f"Chat to be analysed: ('jarvis previous responses': {jarvis_response_str}), ('the user messages': {content_str}), ('user's current message': {message})",
+                    "content": f"Chat to be analysed: ('sanusi previous responses': {sanusi_response_str}), ('the user messages': {content_str}), ('user's current message': {message})",
                 },
             ]
             answer_4_chat_context = generate_response_chat(
@@ -616,7 +616,7 @@ class ChatViewSet(viewsets.GenericViewSet):
             #     chat=chat,
             #     content=message,
             #     sender=str(sender),
-            #     jarvis_response=response_json,
+            #     sanusi_response=response_json,
             # )
             # return Response(data=response_json, status=status.HTTP_200_OK)
 
@@ -652,7 +652,7 @@ class ChatViewSet(viewsets.GenericViewSet):
                         chat=chat,
                         content=message,
                         sender=str(sender),
-                        jarvis_response=response_json,
+                        sanusi_response=response_json,
                     )
                     return Response(data=response_json, status=status.HTTP_200_OK)
                 else:
@@ -807,7 +807,7 @@ class ChatViewSet(viewsets.GenericViewSet):
                 },
                 {
                     "role": "system",
-                    "content": f"User's previous messages for reflection: {[message.content for message in last_message] if last_message else ''} and your last response was: {[message.jarvis_response for message in last_message] if last_message else ' '} and user's name is {customer_name}",
+                    "content": f"User's previous messages for reflection: {[message.content for message in last_message] if last_message else ''} and your last response was: {[message.sanusi_response for message in last_message] if last_message else ' '} and user's name is {customer_name}",
                 },
                 {"role": "user", "content": f"{message}"},
             ]
@@ -865,7 +865,7 @@ class ChatViewSet(viewsets.GenericViewSet):
                 },
                 {
                     "role": "assistant",
-                    "content": f"Chat to be analysed: ('jarvis previous responses': {jarvis_response_str}), ('the user messages': {content_str}), ('user's current message': {message})",
+                    "content": f"Chat to be analysed: ('sanusi previous responses': {sanusi_response_str}), ('the user messages': {content_str}), ('user's current message': {message})",
                 },
             ]
             answer_4_chat_context = generate_response_chat(
@@ -1135,9 +1135,9 @@ def send_message_view(request, chat_id):
 def get_messages(request, chat_id):
     chat = get_object_or_404(Chat, id=chat_id)
     messages = chat.messages.all().values("sender", "content", "sent_time")
-    jarvis_messages = chat.jarvis_messages.all().values("jarvis_response")
+    sanusi_messages = chat.sanusi_messages.all().values("sanusi_response")
     return JsonResponse(
-        {"messages": list(messages), "jarvis_messages": jarvis_messages}
+        {"messages": list(messages), "sanusi_messages": sanusi_messages}
     )
 
 
@@ -1184,9 +1184,9 @@ def auto_response(request):
 
         if message_id:
             try:
-                previous_message = jarvis_message.objects.get(message_id=message_id)
+                previous_message = sanusi_message.objects.get(message_id=message_id)
                 conversation_id = previous_message.conversation_id
-            except jarvis_message.DoesNotExist:
+            except sanusi_message.DoesNotExist:
                 return Response("Message not found")
         else:
             conversation_id = None
@@ -1223,12 +1223,12 @@ def auto_response(request):
         escalation_department = match.group(1) if match else "Unknown"
         sentiment = match.group(2) if match else "Unknown"
 
-        jarvis_message.objects.create(
+        sanusi_message.objects.create(
             business=business,
             message_id=message_id,
             conversation_id=conversation_id,
             message_content=message,
-            jarvis_response=answer,
+            sanusi_response=answer,
             channel=channel,
             chat_session=data.get("chat_session", None),
         )

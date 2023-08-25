@@ -3,7 +3,7 @@ from rest_framework import serializers
 from django.shortcuts import get_object_or_404
 from .models import Business
 from business.models import KnowledgeBase, EscalationDepartment
-from jarvis.views import generate_response_chat
+from sanusi.views import generate_response_chat
 
 
 class KnowledgeBaseSerializer(serializers.ModelSerializer):

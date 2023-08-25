@@ -96,7 +96,7 @@ class Message(models.Model):
         choices=SENDER_CHOICES.choices,
         default=SENDER_CHOICES.CUSTOMER,
     )
-    jarvis_response = models.TextField(null=True, blank=True)
+    sanusi_response = models.TextField(null=True, blank=True)
     content = models.TextField()
     sent_time = models.DateTimeField(auto_now_add=True)
     is_multimedia = models.BooleanField(default=False)

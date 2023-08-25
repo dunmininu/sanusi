@@ -22,7 +22,7 @@ class MessageSerializer(serializers.ModelSerializer):
             "sender",
             "content",
             "sent_time",
-            "jarvis_response",
+            "sanusi_response",
         ]
 
 

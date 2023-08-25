@@ -2,7 +2,7 @@ import os
 import json
 from django.core.wsgi import get_wsgi_application
 
-os.environ.setdefault("DJANGO_SETTINGS_MODULE", "jarvis_backend.settings")
+os.environ.setdefault("DJANGO_SETTINGS_MODULE", "sanusi_backend.settings")
 application = get_wsgi_application()
 
 from business.models import Category, Product, Inventory
