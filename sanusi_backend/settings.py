@@ -158,7 +158,6 @@ STATIC_ROOT = os.path.join(BASE_DIR, "staticfiles")
 # https://docs.djangoproject.com/en/4.1/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
-OPENAI_API_ENDPOINT = config("OPENAI_API_ENDPOINT")
 OPENAI_KEY = config("OPENAI_KEY")
 
 # crispy templates

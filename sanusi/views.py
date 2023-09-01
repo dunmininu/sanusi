@@ -28,7 +28,6 @@ from .serializers import (
 from business.models import KnowledgeBase
 
 # Create your views here.
-OPENAI_API_ENDPOINT = settings.OPENAI_API_ENDPOINT
 openai.api_key = settings.OPENAI_KEY
 
 
