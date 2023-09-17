@@ -1,15 +1,21 @@
 from django.db import models
+import uuid
 
 # Create your models here.
 
 
 class Business(models.Model):
-    company_id = models.CharField(
-        max_length=572, unique=True, null=True, blank=True, db_index=True
+    company_id = models.UUIDField(
+        default=uuid.uuid4, unique=True, db_index=True, primary_key=True
     )
     name = models.CharField(max_length=200, db_index=True)
     reply_instructions = models.TextField(null=True, blank=True)
     token = models.CharField(max_length=72, null=True, default="")
+
+
+    def __str__(self):
+        return self.name
+        
 
 
 class EscalationDepartment(models.Model):

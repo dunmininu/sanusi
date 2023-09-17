@@ -13,3 +13,7 @@ npm i react-router-dom
 
 then the webpack.config.js and then the babel.config.json
 the package.json will be edited too
+python manage.py migrate_schemas --shared
+
+WARNING:
+Never use migrate as it would sync all your apps to public!

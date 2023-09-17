@@ -28,11 +28,11 @@ SECRET_KEY = config("SECRET_KEY")
 DEBUG = config("DEBUG")
 
 ALLOWED_HOSTS = [
-    "sanusi-fxotnlz4aa-uc.a.run.app",
-    "dev.sanusi.enif.ai",
-    "dev-business.enif.ai",
-    "business.enif.ai",
-    "sanusi.enif.ai",
+    # "sanusi-fxotnlz4aa-uc.a.run.app",
+    # "dev.sanusi.enif.ai",
+    # "dev-business.enif.ai",
+    # "business.enif.ai",
+    # "sanusi.enif.ai",
     "localhost",
     "127.0.0.1",
 ]
@@ -40,13 +40,45 @@ ALLOWED_HOSTS = [
 
 # Application definition
 
+SHARED_APPS = (
+    "tenant_schemas",  # mandatory, should always be before any django app
+    "business",
+    "django.contrib.contenttypes",
+    # everything below here is optional
+    "django.contrib.auth",
+    "django.contrib.sessions",
+    "django.contrib.sites",
+    "django.contrib.messages",
+    "django.contrib.admin",
+    # third party libraries
+    "rest_framework",
+    "crispy_forms",
+    "crispy_bootstrap4",
+    "corsheaders",
+    "drf_yasg",
+    # "authentication",
+)
+
+TENANT_APPS = (
+    "django.contrib.contenttypes",
+    # your tenant-specific apps
+    "sanusi",
+    "business",
+    "chat",
+    "analytics",
+    "frontend"
+)
+
 INSTALLED_APPS = [
+    "tenant_schemas", 
     "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
+    "django.contrib.sites",
+
     # third party libraries
     "rest_framework",
     "crispy_forms",
@@ -58,10 +90,14 @@ INSTALLED_APPS = [
     "business",
     "chat",
     "analytics",
-    "frontend"
+    "frontend",
+    # "authentication",
 ]
 
+TENANT_MODEL = "business.tenant.Client"
+
 MIDDLEWARE = [
+    "tenant_schemas.middleware.TenantMiddleware",
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
@@ -103,7 +139,7 @@ DATABASES = {
     #     "NAME": BASE_DIR / "db.sqlite3",
     # }
     "default": {
-        "ENGINE": "django.db.backends.postgresql",
+        'ENGINE': 'tenant_schemas.postgresql_backend',
         "NAME": config("DB_NAME"),
         "USER": config("DB_USER"),
         "PASSWORD": config("DB_PASSWORD"),
@@ -113,6 +149,13 @@ DATABASES = {
     },
 }
 
+DATABASE_ROUTERS = (
+    'tenant_schemas.routers.TenantSyncRouter',
+)
+
+DEFAULT_FILE_STORAGE = "tenant_schemas.storage.TenantFileSystemStorage"
+
+# AUTH_USER_MODEL = 'authentication.User'
 
 # Password validation
 # https://docs.djangoproject.com/en/4.1/ref/settings/#auth-password-validators
@@ -165,16 +208,16 @@ CRISPY_ALLOWED_TEMPLATE_PACKS = "bootstrap4"
 CRISPY_TEMPLATE_PACK = "bootstrap4"
 
 
-CORS_ALLOWED_ORIGINS = config(
-    "ALLOWED_ORIGINS", default="*", cast=lambda v: [s.strip() for s in v.split(",")]
-)
-CORS_ORIGIN_ALLOW_ALL = False
-CORS_ALLOW_CREDENTIALS = True
-CORS_ORIGIN_WHITELIST = [
-    "http://localhost:5174",
-    "https://sanusi.enif.ai",
-    # other origins you want to allow
-]
+# CORS_ALLOWED_ORIGINS = config(
+#     "ALLOWED_HOSTS", default="*", cast=lambda v: [s.strip() for s in v.split(",")]
+# )
+# CORS_ORIGIN_ALLOW_ALL = False
+# CORS_ALLOW_CREDENTIALS = True
+# CORS_ORIGIN_WHITELIST = [
+#     "http://localhost:5174",
+#     "https://sanusi.enif.ai",
+#     # other origins you want to allow
+# ]
 
 API_PREFIX = "/api/v1"
 
