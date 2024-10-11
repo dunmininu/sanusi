@@ -2,7 +2,7 @@ import json
 from rest_framework import serializers
 from django.shortcuts import get_object_or_404
 from .models import Business
-from business.models import KnowledgeBase, EscalationDepartment
+from business.private.models import KnowledgeBase, EscalationDepartment
 from sanusi.views import generate_response_chat
 
 

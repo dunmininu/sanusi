@@ -1,5 +1,4 @@
 from django.db import models
-from business.models import Business
 from chat.models import Chat
 
 
@@ -10,13 +9,6 @@ class ChannelTypes(models.TextChoices):
 
 
 class Message(models.Model):
-    business = models.ForeignKey(
-        Business,
-        on_delete=models.CASCADE,
-        related_name="business_message",
-        null=True,
-        blank=True,
-    )
     chat = models.ForeignKey(
         Chat,
         on_delete=models.CASCADE,

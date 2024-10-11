@@ -15,7 +15,7 @@ from drf_yasg.utils import swagger_auto_schema, no_body
 from drf_yasg import openapi
 
 from .models import Business
-from .models import KnowledgeBase, EscalationDepartment
+from business.private.models import KnowledgeBase, EscalationDepartment
 from .serializers import (
     BulkCreateKnowledgeBaseSerializer,
     BusinessSerializer,

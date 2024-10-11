@@ -25,7 +25,7 @@ from .serializers import (
     MessageSerializer,
 )
 
-from business.models import KnowledgeBase
+from business.private.models import KnowledgeBase
 
 # Create your views here.
 openai.api_key = settings.OPENAI_KEY

@@ -2,7 +2,7 @@ import uuid
 from django.db import models
 from django.contrib.postgres.fields import ArrayField
 
-from business.models import Business
+# from business.models import Business
 
 
 class ChatStatus(models.TextChoices):
@@ -35,13 +35,6 @@ class Customer(models.Model):
 
 
 class Chat(models.Model):
-    business = models.ForeignKey(
-        Business,
-        on_delete=models.CASCADE,
-        related_name="business_chats",
-        null=True,
-        blank=True,
-    )
     customer = models.ForeignKey(
         Customer,
         on_delete=models.CASCADE,

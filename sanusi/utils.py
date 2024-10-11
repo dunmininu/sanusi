@@ -231,4 +231,4 @@ def parse_answer_with_regex(answer):
             # If parsing fails, return the original string
             return answer
 
-    return answer
+    # return answer

@@ -10,6 +10,7 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/4.1/ref/settings/
 """
 
+from datetime import timedelta
 from pathlib import Path
 from decouple import config
 import os
@@ -41,63 +42,46 @@ ALLOWED_HOSTS = [
 # Application definition
 
 SHARED_APPS = (
-    "tenant_schemas",  # mandatory, should always be before any django app
+    "django_tenants",  # mandatory, should always be before any django app
     "business",
     "django.contrib.contenttypes",
-    # everything below here is optional
     "django.contrib.auth",
     "django.contrib.sessions",
     "django.contrib.sites",
     "django.contrib.messages",
+    "django.contrib.staticfiles",
     "django.contrib.admin",
     # third party libraries
     "rest_framework",
+    "rest_framework.authtoken",
+    "rest_framework_simplejwt.token_blacklist",
+    # "debug_toolbar",
+    "drf_yasg",
+    "django_filters",
     "crispy_forms",
     "crispy_bootstrap4",
     "corsheaders",
-    "drf_yasg",
-    # "authentication",
+
+    "accounts",
 )
 
 TENANT_APPS = (
     "django.contrib.contenttypes",
-    # your tenant-specific apps
     "sanusi",
-    "business",
-    "chat",
-    "analytics",
-    "frontend"
-)
-
-INSTALLED_APPS = [
-    "tenant_schemas", 
-    "django.contrib.admin",
-    "django.contrib.auth",
-    "django.contrib.contenttypes",
-    "django.contrib.sessions",
-    "django.contrib.messages",
-    "django.contrib.staticfiles",
-    "django.contrib.sites",
-
-    # third party libraries
-    "rest_framework",
-    "crispy_forms",
-    "crispy_bootstrap4",
-    "corsheaders",
-    "drf_yasg",
-    # my apps
-    "sanusi",
-    "business",
     "chat",
     "analytics",
     "frontend",
-    # "authentication",
-]
+    "leads",
+    "business.private.apps.PrivateConfig"
+)
 
-TENANT_MODEL = "business.tenant.Client"
+INSTALLED_APPS = list(SHARED_APPS) + [app for app in TENANT_APPS if app not in SHARED_APPS]
+
+TENANT_MODEL = "business.Business"
+TENANT_DOMAIN_MODEL = "business.Domain"
 
 MIDDLEWARE = [
-    "tenant_schemas.middleware.TenantMiddleware",
+    "django_tenants.middleware.TenantMiddleware",
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
@@ -139,7 +123,7 @@ DATABASES = {
     #     "NAME": BASE_DIR / "db.sqlite3",
     # }
     "default": {
-        'ENGINE': 'tenant_schemas.postgresql_backend',
+        'ENGINE': 'django_tenants.postgresql_backend',
         "NAME": config("DB_NAME"),
         "USER": config("DB_USER"),
         "PASSWORD": config("DB_PASSWORD"),
@@ -150,12 +134,12 @@ DATABASES = {
 }
 
 DATABASE_ROUTERS = (
-    'tenant_schemas.routers.TenantSyncRouter',
+    'django_tenants.routers.TenantSyncRouter',
 )
 
-DEFAULT_FILE_STORAGE = "tenant_schemas.storage.TenantFileSystemStorage"
+DEFAULT_FILE_STORAGE = "django_tenants.storage.TenantFileSystemStorage"
 
-# AUTH_USER_MODEL = 'authentication.User'
+AUTH_USER_MODEL = 'accounts.User'
 
 # Password validation
 # https://docs.djangoproject.com/en/4.1/ref/settings/#auth-password-validators
@@ -177,6 +161,18 @@ AUTH_PASSWORD_VALIDATORS = [
 
 REST_FRAMEWORK = {
     "DEFAULT_SCHEMA_CLASS": "rest_framework.schemas.coreapi.AutoSchema",
+    'DEFAULT_AUTHENTICATION_CLASSES': (
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
+    ),
+}
+
+SIMPLE_JWT = {
+    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=60),
+    'SLIDING_TOKEN_REFRESH_LIFETIME': timedelta(days=1),
+    'SLIDING_TOKEN_LIFETIME': timedelta(minutes=120),
+    'SLIDING_TOKEN_REFRESH_LIFETIME_GRACE_PERIOD': timedelta(days=0),
+    'SLIDING_TOKEN_LIFETIME_GRACE_PERIOD': timedelta(days=0),
+    'SLIDING_TOKEN_REFRESH_LIFETIME_GRACE_PERIOD': timedelta(days=0),
 }
 
 # Internationalization
@@ -234,3 +230,10 @@ SWAGGER_SETTINGS = {
     ),  # Set the base API URL with the desired scheme
     # Other settings...
 }
+
+
+# CELERY_BROKER_URL = "redis://localhost:6379"
+# CELERY_RESULT_BACKEND = "redis://localhost:6379"
+
+CELERY_BROKER_URL = 'pyamqp://myuser:mypassword@localhost:5672/myvhost'
+CELERY_RESULT_BACKEND = 'rpc://'

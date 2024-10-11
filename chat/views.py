@@ -17,8 +17,8 @@ from rest_framework.response import Response
 from drf_yasg.utils import swagger_auto_schema, no_body
 from drf_yasg import openapi
 
-from llama_index import GPTVectorStoreIndex
-from llama_index.data_structs.node import Node
+# from llama_index import GPTVectorStoreIndex
+# from llama_index.data_structs.node import Node
 
 from sanusi.analysis.entity_recognition import extract_topics
 
@@ -44,7 +44,8 @@ from sanusi.views import (
     construct_index,
     structure_response,
 )
-from business.models import Business, Category, KnowledgeBase, Product
+from business.models import Business
+from business.private.models import Category, KnowledgeBase, Product
 from sanusi.models import Message as sanusi_message
 from sanusi.utils import (
     is_valid_format,
@@ -385,7 +386,7 @@ class ChatViewSet(viewsets.GenericViewSet):
             knowledge_base_contents = [kb.cleaned_data for kb in knowledge_bases]
         else:
             return Response(
-                "This business has no knowledge, kindly create one to activate auto response"
+                "This business has no knowledge base, kindly create one to activate auto response"
             )
 
         # Retrieve escalation departments for the business
@@ -968,14 +969,14 @@ class ChatViewSet(viewsets.GenericViewSet):
             save_chat_and_message(chat, sender, message, response_json, channel)
             return Response(data=response_json, status=status.HTTP_200_OK)
 
-        elif channel == "chat_v3":
-            # Construct the Node object with the appropriate arguments
-            for p in prompt:
-                content_nodes = []
-                node = Node(p)
-                content_nodes.append(node)
-            response_content = construct_index(content_nodes)
-            return Response(data=response_content, status=status.HTTP_200_OK)
+        # elif channel == "chat_v3":
+        #     # Construct the Node object with the appropriate arguments
+        #     for p in prompt:
+        #         content_nodes = []
+        #         node = Node(p)
+        #         content_nodes.append(node)
+        #     response_content = construct_index(content_nodes)
+        #     return Response(data=response_content, status=status.HTTP_200_OK)
 
     @swagger_auto_schema(request_body=RestructureTextSerializer)
     @action(
