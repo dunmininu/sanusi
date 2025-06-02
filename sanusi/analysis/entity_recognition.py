@@ -26,6 +26,7 @@ def extract_topics(text):
     result = {
         "keywords": list(set(keywords)),  # To ensure no duplicate keywords
         "entities": list(set(entities)),  # To ensure no duplicate entities
+        "combined": combined,
     }
 
     return result

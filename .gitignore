@@ -135,3 +135,5 @@ dump_*
 dump*
 notes*
 erl_crash.dump
+.DS_Store
+frontend/.DS_Store

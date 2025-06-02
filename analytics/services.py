@@ -1,4 +1,4 @@
-from django.db import models
+from django.db.models import Count
 from chat.models import SENDER_CHOICES, Chat, ChatStatus, Customer, Message
 
 
@@ -9,7 +9,7 @@ def total_customers_per_business(business):
 
 def get_unique_customer_count():
     unique_customers = Customer.objects.annotate(
-        chat_count=models.Count("customer_chats")
+        chat_count=Count("customer_chats")
     ).filter(chat_count__gt=0)
     return unique_customers.count()
 
@@ -65,7 +65,7 @@ def get_repeat_interaction_counts():
     repeat_interactions = (
         Chat.objects.values("customer")
         .annotate(
-            repeat_count=models.Count("customer"),
+            repeat_count=Count("customer"),
         )
         .filter(repeat_count__gt=1)
     )
@@ -75,7 +75,7 @@ def get_repeat_interaction_counts():
 
 def get_sentiment_distribution():
     sentiment_counts = Chat.objects.values("sentiment").annotate(
-        sentiment_count=models.Count("sentiment")
+        sentiment_count=Count("sentiment")
     )
 
     total_messages = Message.objects.count()

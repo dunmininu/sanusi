@@ -8,6 +8,7 @@ from accounts.models import EmailAddress
 
 User = get_user_model()
 
+
 def validate_user_password_attribute_similarity(password, user):
     if settings.DEBUG:
         return
@@ -17,6 +18,7 @@ def validate_user_password_attribute_similarity(password, user):
         validator.validate(password, user)
     except ValidationError as e:
         raise serializers.ValidationError({"password": e.messages})
+
 
 class RegisterSerializer(serializers.Serializer):
     email = serializers.EmailField(required=True)
@@ -36,12 +38,10 @@ class RegisterSerializer(serializers.Serializer):
     def validate_password(self, value):
         password_validation.validate_password(value)
         return value
-    
 
     def save(self):
-        email = self.validated_data['email']
-        password = self.validated_data['password']
-
+        email = self.validated_data["email"]
+        password = self.validated_data["password"]
 
         user = User(email=email)
         user.set_password(password)
@@ -64,4 +64,3 @@ class UserSerializer(serializers.ModelSerializer):
         "date_joined",
         "is_active",
     ]
-    

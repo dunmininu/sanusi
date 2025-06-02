@@ -61,7 +61,6 @@ SHARED_APPS = (
     "crispy_forms",
     "crispy_bootstrap4",
     "corsheaders",
-
     "accounts",
 )
 
@@ -72,10 +71,12 @@ TENANT_APPS = (
     "analytics",
     "frontend",
     "leads",
-    "business.private.apps.PrivateConfig"
+    "business.private.apps.PrivateConfig",
 )
 
-INSTALLED_APPS = list(SHARED_APPS) + [app for app in TENANT_APPS if app not in SHARED_APPS]
+INSTALLED_APPS = list(SHARED_APPS) + [
+    app for app in TENANT_APPS if app not in SHARED_APPS
+]
 
 TENANT_MODEL = "business.Business"
 TENANT_DOMAIN_MODEL = "business.Domain"
@@ -123,7 +124,7 @@ DATABASES = {
     #     "NAME": BASE_DIR / "db.sqlite3",
     # }
     "default": {
-        'ENGINE': 'django_tenants.postgresql_backend',
+        "ENGINE": "django_tenants.postgresql_backend",
         "NAME": config("DB_NAME"),
         "USER": config("DB_USER"),
         "PASSWORD": config("DB_PASSWORD"),
@@ -133,13 +134,11 @@ DATABASES = {
     },
 }
 
-DATABASE_ROUTERS = (
-    'django_tenants.routers.TenantSyncRouter',
-)
+DATABASE_ROUTERS = ("django_tenants.routers.TenantSyncRouter",)
 
 DEFAULT_FILE_STORAGE = "django_tenants.storage.TenantFileSystemStorage"
 
-AUTH_USER_MODEL = 'accounts.User'
+AUTH_USER_MODEL = "accounts.User"
 
 # Password validation
 # https://docs.djangoproject.com/en/4.1/ref/settings/#auth-password-validators
@@ -161,18 +160,18 @@ AUTH_PASSWORD_VALIDATORS = [
 
 REST_FRAMEWORK = {
     "DEFAULT_SCHEMA_CLASS": "rest_framework.schemas.coreapi.AutoSchema",
-    'DEFAULT_AUTHENTICATION_CLASSES': (
-        'rest_framework_simplejwt.authentication.JWTAuthentication',
+    "DEFAULT_AUTHENTICATION_CLASSES": (
+        "rest_framework_simplejwt.authentication.JWTAuthentication",
     ),
 }
 
 SIMPLE_JWT = {
-    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=60),
-    'SLIDING_TOKEN_REFRESH_LIFETIME': timedelta(days=1),
-    'SLIDING_TOKEN_LIFETIME': timedelta(minutes=120),
-    'SLIDING_TOKEN_REFRESH_LIFETIME_GRACE_PERIOD': timedelta(days=0),
-    'SLIDING_TOKEN_LIFETIME_GRACE_PERIOD': timedelta(days=0),
-    'SLIDING_TOKEN_REFRESH_LIFETIME_GRACE_PERIOD': timedelta(days=0),
+    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=60),
+    "SLIDING_TOKEN_REFRESH_LIFETIME": timedelta(days=1),
+    "SLIDING_TOKEN_LIFETIME": timedelta(minutes=120),
+    "SLIDING_TOKEN_REFRESH_LIFETIME_GRACE_PERIOD": timedelta(days=0),
+    "SLIDING_TOKEN_LIFETIME_GRACE_PERIOD": timedelta(days=0),
+    "SLIDING_TOKEN_REFRESH_LIFETIME_GRACE_PERIOD": timedelta(days=0),
 }
 
 # Internationalization
@@ -235,5 +234,5 @@ SWAGGER_SETTINGS = {
 # CELERY_BROKER_URL = "redis://localhost:6379"
 # CELERY_RESULT_BACKEND = "redis://localhost:6379"
 
-CELERY_BROKER_URL = 'pyamqp://myuser:mypassword@localhost:5672/myvhost'
-CELERY_RESULT_BACKEND = 'rpc://'
+CELERY_BROKER_URL = "pyamqp://myuser:mypassword@localhost:5672/myvhost"
+CELERY_RESULT_BACKEND = "rpc://"
