@@ -4,16 +4,6 @@ from django.db import models
 from django.core.validators import MinValueValidator
 from django.utils import timezone
 
-from django_tenants.models import TenantMixin, DomainMixin
-from django_tenants.utils import get_public_schema_name
-
-# Create your models here.
-
-
-class BusinessQuerySet(models.QuerySet):
-    def private(self):
-        return self.exclude(schema_name=get_public_schema_name())
-    
 
 class BusinessTypeChoices(models.TextChoices):
     ECOMMERCE = 'ecommerce'
@@ -21,7 +11,8 @@ class BusinessTypeChoices(models.TextChoices):
     MEDICAL = 'medical'
     SAAS = 'saas'
 
-class Business(TenantMixin):
+
+class Business(models.Model):
     # Unique identifier for the business
     company_id = models.UUIDField(
         default=uuid.uuid4, unique=True, db_index=True, primary_key=True
@@ -29,7 +20,9 @@ class Business(TenantMixin):
 
     # Business name
     name = models.CharField(max_length=200, db_index=True)
-    business_type = models.CharField(max_length=56, choices=BusinessTypeChoices.choices, blank=True, default="")
+    business_type = models.CharField(
+        max_length=56, choices=BusinessTypeChoices.choices, blank=True, default=""
+    )
 
     # Instructions for replying to customer requests
     reply_instructions = models.TextField(null=True, blank=True)
@@ -37,7 +30,7 @@ class Business(TenantMixin):
     # Address
     address = models.CharField(max_length=256, default="")
 
-    # Contact information (you can add more fields as needed)
+    # Contact information
     email = models.EmailField(null=True, blank=True)
     phone_number = models.CharField(max_length=20, default="", blank=True)
     contact_person = models.CharField(max_length=100, default="", blank=True)
@@ -48,14 +41,14 @@ class Business(TenantMixin):
     # Industry or category
     industry = models.CharField(max_length=100, default="", blank=True)
 
-    # Token or API key (consider using a more secure method)
+    # Token or API key
     token = models.CharField(max_length=72, null=True, default="")
 
     # Creation date
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
-    # Status (e.g., active, inactive, pending)
+    # Status
     status = models.CharField(
         max_length=20,
         choices=[
@@ -69,19 +62,9 @@ class Business(TenantMixin):
     # Notes or comments
     notes = models.TextField(null=True, blank=True)
 
-    objects = BusinessQuerySet.as_manager()
-
-    auto_create_schema = True
-    auto_drop_schema = True
-
-
-
     def __str__(self):
         return self.name
-    
-class Domain(DomainMixin):
-    pass
-        
+
 
 class Subscription(models.Model):
     # Unique identifier for the subscription
@@ -91,7 +74,7 @@ class Subscription(models.Model):
 
     # Reference to the associated business
     business = models.OneToOneField(
-        Business,  # Replace 'yourapp' with your app's name
+        Business,
         on_delete=models.CASCADE,
         related_name='subscription',
     )
@@ -114,6 +97,7 @@ class Subscription(models.Model):
 
     def __str__(self):
         return f"{self.business.name} - {self.plan} Subscription"
+
 
 
 # class EscalationDepartment(models.Model):

@@ -41,8 +41,8 @@ ALLOWED_HOSTS = [
 
 # Application definition
 
-SHARED_APPS = (
-    "django_tenants",  # mandatory, should always be before any django app
+INSTALLED_APPS = (
+    # "django_tenants",  # mandatory, should always be before any django app
     "business",
     "django.contrib.contenttypes",
     "django.contrib.auth",
@@ -62,10 +62,6 @@ SHARED_APPS = (
     "crispy_bootstrap4",
     "corsheaders",
     "accounts",
-)
-
-TENANT_APPS = (
-    "django.contrib.contenttypes",
     "sanusi",
     "chat",
     "analytics",
@@ -74,15 +70,25 @@ TENANT_APPS = (
     "business.private.apps.PrivateConfig",
 )
 
-INSTALLED_APPS = list(SHARED_APPS) + [
-    app for app in TENANT_APPS if app not in SHARED_APPS
-]
+# TENANT_APPS = (
+#     "django.contrib.contenttypes",
+#     "sanusi",
+#     "chat",
+#     "analytics",
+#     "frontend",
+#     "leads",
+#     "business.private.apps.PrivateConfig",
+# )
 
-TENANT_MODEL = "business.Business"
-TENANT_DOMAIN_MODEL = "business.Domain"
+# INSTALLED_APPS = list(SHARED_APPS) + [
+#     app for app in TENANT_APPS if app not in SHARED_APPS
+# ]
+
+# TENANT_MODEL = "business.Business"
+# TENANT_DOMAIN_MODEL = "business.Domain"
 
 MIDDLEWARE = [
-    "django_tenants.middleware.TenantMiddleware",
+    # "django_tenants.middleware.TenantMiddleware",
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
@@ -124,19 +130,19 @@ DATABASES = {
     #     "NAME": BASE_DIR / "db.sqlite3",
     # }
     "default": {
-        "ENGINE": "django_tenants.postgresql_backend",
+        "ENGINE": "django.db.backends.postgresql",
         "NAME": config("DB_NAME"),
         "USER": config("DB_USER"),
         "PASSWORD": config("DB_PASSWORD"),
-        "HOST": config("DB_HOST"),
+        "HOST": 'localhost', # config("DB_HOST"),
         "PORT": config("DB_PORT", cast=int),
         "ATOMIC_REQUESTS": True,
     },
 }
 
-DATABASE_ROUTERS = ("django_tenants.routers.TenantSyncRouter",)
+# DATABASE_ROUTERS = ("django_tenants.routers.TenantSyncRouter",)
 
-DEFAULT_FILE_STORAGE = "django_tenants.storage.TenantFileSystemStorage"
+# DEFAULT_FILE_STORAGE = "django_tenants.storage.TenantFileSystemStorage"
 
 AUTH_USER_MODEL = "accounts.User"
 
@@ -234,5 +240,5 @@ SWAGGER_SETTINGS = {
 # CELERY_BROKER_URL = "redis://localhost:6379"
 # CELERY_RESULT_BACKEND = "redis://localhost:6379"
 
-CELERY_BROKER_URL = "pyamqp://myuser:mypassword@localhost:5672/myvhost"
-CELERY_RESULT_BACKEND = "rpc://"
+# CELERY_BROKER_URL = "pyamqp://myuser:mypassword@localhost:5672/myvhost"
+# CELERY_RESULT_BACKEND = "rpc://"
