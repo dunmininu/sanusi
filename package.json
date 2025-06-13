@@ -1,0 +1,38 @@
+{
+  "name": "sanusi",
+  "version": "1.0.0",
+  "description": "pip install -r requirements.txt python -m spacy download en_core_web_sm npm init -y npm i webpack webpack-cli --save-dev npm i @babel/core babel-loader @babel/preset-env @babel/preset-react --save-dev npm i react react-dom npm install @mui/material @emotion/react @emotion/styled npm install @mui/icons-material npm i @babel/plugin-proposal-class-properties \\\\ this enables me to use async and await npm i react-router-dom",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Sanusi-AI/Sanusi.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Sanusi-AI/Sanusi/issues"
+  },
+  "homepage": "https://github.com/Sanusi-AI/Sanusi#readme",
+  "devDependencies": {
+    "@babel/core": "^7.27.4",
+    "@babel/preset-env": "^7.27.2",
+    "@babel/preset-react": "^7.27.1",
+    "babel-loader": "^10.0.0",
+    "webpack": "^5.99.9",
+    "webpack-cli": "^6.0.1"
+  },
+  "dependencies": {
+    "@babel/plugin-proposal-class-properties": "^7.18.6",
+    "@emotion/react": "^11.14.0",
+    "@emotion/styled": "^11.14.0",
+    "@mui/icons-material": "^7.1.1",
+    "@mui/material": "^7.1.1",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
+    "react-router-dom": "^7.6.2"
+  }
+}
