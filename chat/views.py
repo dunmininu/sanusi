@@ -525,12 +525,14 @@ class ChatViewSet(viewsets.GenericViewSet):
 
             response_json = {
                 "response": response_html,
-                "escalate_issue": True
-                if answer_4_escalation_department["choices"][0]["message"][
-                    "content"
-                ].lower()
-                in ["sales", "operations", "billing", "engineering", "support"]
-                else False,
+                "escalate_issue": (
+                    True
+                    if answer_4_escalation_department["choices"][0]["message"][
+                        "content"
+                    ].lower()
+                    in ["sales", "operations", "billing", "engineering", "support"]
+                    else False
+                ),
                 "escalation_department": answer_4_escalation_department["choices"][0][
                     "message"
                 ]["content"],
@@ -634,12 +636,12 @@ class ChatViewSet(viewsets.GenericViewSet):
 
                 response_json = {
                     "response": response_parts[0] if len(response_parts) > 0 else None,
-                    "escalate_issue": response_parts[1]
-                    if len(response_parts) > 1
-                    else None,
-                    "escalation_department": response_parts[2]
-                    if len(response_parts) > 2
-                    else None,
+                    "escalate_issue": (
+                        response_parts[1] if len(response_parts) > 1 else None
+                    ),
+                    "escalation_department": (
+                        response_parts[2] if len(response_parts) > 2 else None
+                    ),
                     "severity": response_parts[3] if len(response_parts) > 3 else None,
                     "sentiment": response_parts[4] if len(response_parts) > 4 else None,
                 }
@@ -874,12 +876,14 @@ class ChatViewSet(viewsets.GenericViewSet):
             )
             response_json = {
                 "response": answer_4_response["choices"][0]["message"]["content"],
-                "escalate_issue": True
-                if answer_4_escalation_department["choices"][0]["message"][
-                    "content"
-                ].lower()
-                in ["sales", "operations", "billing", "engineering", "support"]
-                else False,
+                "escalate_issue": (
+                    True
+                    if answer_4_escalation_department["choices"][0]["message"][
+                        "content"
+                    ].lower()
+                    in ["sales", "operations", "billing", "engineering", "support"]
+                    else False
+                ),
                 "escalation_department": answer_4_escalation_department["choices"][0][
                     "message"
                 ]["content"],
@@ -993,7 +997,7 @@ class ChatViewSet(viewsets.GenericViewSet):
 
         if channel == "email":
             prompt = [
-                f"You are Enif's smart assistant that assists with writing professional emails like grammarly, Make sure to avoid mentioning that you are an AI language model. Please regenerate/rewrite the following text into a grammatically correct and formal email body like <p>[your response]</p>: {content}.",
+                f"You are Sanusi's smart assistant that assists with writing professional emails like grammarly, Make sure to avoid mentioning that you are an AI language model. Please regenerate/rewrite the following text into a grammatically correct and formal email body like <p>[your response]</p>: {content}.",
                 # {
                 #     "role": "assistant",
                 #     "content": f"Please restructure the following content to have a formal HTML email format like <p>[your response]</p>.: {content}",
@@ -1001,7 +1005,7 @@ class ChatViewSet(viewsets.GenericViewSet):
             ]
         elif channel == "chat":
             prompt = [
-                f"You are Enif's smart assistant that assists with editing text and puts it in a friendly way like grammarly, Make sure to avoid mentioning that you are an AI language model. Please regenerate/rewrite the following text into a grammatically correct one: {content}.",
+                f"You are Sanusi's smart assistant that assists with editing text and puts it in a friendly way like grammarly, Make sure to avoid mentioning that you are an AI language model. Please regenerate/rewrite the following text into a grammatically correct one: {content}.",
             ]
         new_text = generate_response_email(prompt)
         return Response(data=new_text["choices"][0]["text"])

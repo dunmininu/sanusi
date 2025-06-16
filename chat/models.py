@@ -12,7 +12,7 @@ class ChatStatus(models.TextChoices):
 
 class ChannelChoices(models.TextChoices):
     EMAIL = ("email", "Email address")
-    CHAT = ("chat", "Enif Chat Channel")
+    CHAT = ("chat", "Sanusi Chat Channel")
     FACEBOOK = ("facebook", "Business facebook channel")
     TELEGRAM = ("telegram", "Business Telegram channel")
     TWITTER = ("twitter", "Business Twitter channel")
