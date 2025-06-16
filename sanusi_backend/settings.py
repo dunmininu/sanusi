@@ -30,10 +30,10 @@ DEBUG = config("DEBUG")
 
 ALLOWED_HOSTS = [
     # "sanusi-fxotnlz4aa-uc.a.run.app",
-    # "dev.sanusi.enif.ai",
-    # "dev-business.enif.ai",
-    # "business.enif.ai",
-    # "sanusi.enif.ai",
+    # "dev.sanusi.sanusi.ai",
+    # "dev-business.sanusi.ai",
+    # "business.sanusi.ai",
+    # "sanusi.sanusi.ai",
     "localhost",
     "127.0.0.1",
 ]
@@ -134,7 +134,7 @@ DATABASES = {
         "NAME": config("DB_NAME"),
         "USER": config("DB_USER"),
         "PASSWORD": config("DB_PASSWORD"),
-        "HOST": 'localhost', # config("DB_HOST"),
+        "HOST": "localhost",  # config("DB_HOST"),
         "PORT": config("DB_PORT", cast=int),
         "ATOMIC_REQUESTS": True,
     },
@@ -216,7 +216,7 @@ CRISPY_TEMPLATE_PACK = "bootstrap4"
 # CORS_ALLOW_CREDENTIALS = True
 # CORS_ORIGIN_WHITELIST = [
 #     "http://localhost:5174",
-#     "https://sanusi.enif.ai",
+#     "https://sanusi.sanusi.ai",
 #     # other origins you want to allow
 # ]
 
@@ -231,7 +231,7 @@ SWAGGER_SETTINGS = {
     },
     "DEFAULT_GENERATOR_CLASS": "drf_yasg.generators.OpenAPISchemaGenerator",
     "DEFAULT_API_URL": config(
-        "DEFAULT_API_URL", default="https://sanusi.enif.ai"
+        "DEFAULT_API_URL", default="https://sanusi.sanusi.ai"
     ),  # Set the base API URL with the desired scheme
     # Other settings...
 }

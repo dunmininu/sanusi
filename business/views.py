@@ -22,7 +22,7 @@ from .serializers import (
     KnowledgeBaseBulkUpdateSerializer,
     KnowledgeBaseDeleteSerializer,
     KnowledgeBaseSerializer,
-    EnifBusinessCreateSerializer,
+    SanusiBusinessCreateSerializer,
 )
 
 
@@ -242,12 +242,12 @@ class KnowledgeBaseViewSet(
         return Response(serializer.data, status=status.HTTP_200_OK)
 
 
-class EnifBusinessViewSet(mixins.CreateModelMixin, viewsets.GenericViewSet):
-    serializer_class = EnifBusinessCreateSerializer
+class SanusiBusinessViewSet(mixins.CreateModelMixin, viewsets.GenericViewSet):
+    serializer_class = SanusiBusinessCreateSerializer
 
     @transaction.atomic
     def create(self, request):
-        serializer = EnifBusinessCreateSerializer(data=request.data)
+        serializer = SanusiBusinessCreateSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         company_id = serializer.validated_data.get("company_id")
         business_name = serializer.validated_data.get("business_name")

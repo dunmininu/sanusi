@@ -146,7 +146,7 @@ class BusinessSerializer(serializers.ModelSerializer):
         return instance
 
 
-class EnifBusinessCreateSerializer(serializers.Serializer):
+class SanusiBusinessCreateSerializer(serializers.Serializer):
     company_id = serializers.CharField(required=False, allow_null=True)
     business_name = serializers.CharField(required=False, allow_null=True)
     knowledge_base = serializers.ListField(required=False, allow_null=True)

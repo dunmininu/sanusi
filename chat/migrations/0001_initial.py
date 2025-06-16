@@ -46,7 +46,7 @@ class Migration(migrations.Migration):
                         blank=True,
                         choices=[
                             ("email", "Email address"),
-                            ("chat", "Enif Chat Channel"),
+                            ("chat", "Sanusi Chat Channel"),
                             ("facebook", "Business facebook channel"),
                             ("telegram", "Business Telegram channel"),
                             ("twitter", "Business Twitter channel"),
