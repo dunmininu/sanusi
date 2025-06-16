@@ -220,6 +220,10 @@ CRISPY_TEMPLATE_PACK = "bootstrap4"
 #     # other origins you want to allow
 # ]
 
+
+# Dev only: allow all origins (for Swagger or local frontend)
+CORS_ALLOW_ALL_ORIGINS = config("DEBUG", cast=bool, default=False)
+
 API_PREFIX = "/api/v1"
 
 
@@ -231,7 +235,8 @@ SWAGGER_SETTINGS = {
     },
     "DEFAULT_GENERATOR_CLASS": "drf_yasg.generators.OpenAPISchemaGenerator",
     "DEFAULT_API_URL": config(
-        "DEFAULT_API_URL", default="https://sanusi.enif.ai"
+        "DEFAULT_API_URL", default="http://127.0.0.1:8000"
+        # "DEFAULT_API_URL", default="https://sanusi.enif.ai"
     ),  # Set the base API URL with the desired scheme
     # Other settings...
 }

@@ -5,7 +5,7 @@ from .views import BusinessApiViewSet, KnowledgeBaseViewSet, EnifBusinessViewSet
 router = routers.DefaultRouter()
 router.register("business", BusinessApiViewSet, basename="business")
 router.register(
-    r"business/(?P<company_id>\w+)/knowledge-base",
+    r"business/(?P<company_id>[^/]+)/knowledge-base",
     KnowledgeBaseViewSet,
     basename="knowledge-base",
 )
