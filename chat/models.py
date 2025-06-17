@@ -2,12 +2,13 @@ import uuid
 from django.db import models
 from django.contrib.postgres.fields import ArrayField
 from business.models import Business
+from sanusi_backend.classes.base_model import BaseModel
 
 # from business.models import Business
 
-class ActiveManager(models.Manager):
-    def get_queryset(self):
-        return super().get_queryset().filter(is_deleted=False)
+# class ActiveManager(models.Manager):
+#     def get_queryset(self):
+#         return super().get_queryset().filter(is_deleted=False)
 class ChatStatus(models.TextChoices):
     ACTIVE = ("active", "all active chats")
     RESOLVED = ("resolved", "all resolved chats")
@@ -22,10 +23,10 @@ class ChannelChoices(models.TextChoices):
     TWITTER = ("twitter", "Business Twitter channel")
 
 
-class Customer(models.Model):
+class Customer(BaseModel):
     # Unique identifier for the subscription
-    customer_id = models.CharField(
-        max_length=256, unique=True, db_index=True, primary_key=True
+    customer_id = models.UUIDField(
+        default=uuid.uuid4, unique=True, db_index=True, primary_key=True
     )
     business = models.ForeignKey(
         Business, on_delete=models.CASCADE, related_name="customer",
@@ -35,12 +36,7 @@ class Customer(models.Model):
     phone_number = models.CharField(max_length=20, null=True, blank=True)
     platform = models.CharField(max_length=256, null=True, blank=True)
     identifier = models.CharField(max_length=256, null=True, blank=True, unique=True)
-    date_created = models.DateTimeField(auto_now_add=True, null=True)
-    last_updated = models.DateTimeField(auto_now=True, null=True)
-    is_deleted = models.BooleanField(default=False)
-
-    objects = ActiveManager()          # Default: only non-deleted
-    all_objects = models.Manager()     # Includes soft-deleted
+    
 
     def generate_identifier(self):
         name = self.name.replace(" ", "")
@@ -53,7 +49,10 @@ class Customer(models.Model):
         return self.name
 
 
-class Chat(models.Model):
+class Chat(BaseModel):
+    id = models.UUIDField(
+        default=uuid.uuid4, unique=True, db_index=True, primary_key=True
+    )
     customer = models.ForeignKey(
         Customer,
         on_delete=models.CASCADE,
@@ -101,7 +100,10 @@ class SENDER_CHOICES(models.TextChoices):
     AGENT = ("agent", "a person that reponds to the initiated chat")
 
 
-class Message(models.Model):
+class Message(BaseModel):
+    id = models.UUIDField(
+        default=uuid.uuid4, unique=True, db_index=True, primary_key=True
+    )
     chat = models.ForeignKey(Chat, on_delete=models.CASCADE, related_name="messages")
     sender = models.CharField(
         max_length=256,

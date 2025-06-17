@@ -3,6 +3,7 @@ import uuid
 from django.db import models
 from django.core.validators import MinValueValidator
 from django.utils import timezone
+from sanusi_backend.classes.base_model import BaseModel
 
 
 class BusinessTypeChoices(models.TextChoices):
@@ -12,7 +13,7 @@ class BusinessTypeChoices(models.TextChoices):
     SAAS = 'saas'
 
 
-class Business(models.Model):
+class Business(BaseModel):
     # Unique identifier for the business
     company_id = models.UUIDField(
         default=uuid.uuid4, unique=True, db_index=True, primary_key=True
@@ -66,10 +67,10 @@ class Business(models.Model):
         return self.name
 
 
-class Subscription(models.Model):
+class Subscription(BaseModel):
     # Unique identifier for the subscription
-    subscription_id = models.CharField(
-        max_length=256, unique=True, db_index=True, primary_key=True
+    subscription_id = models.UUIDField(
+        default=uuid.uuid4, unique=True, db_index=True, primary_key=True
     )
 
     # Reference to the associated business
@@ -100,19 +101,22 @@ class Subscription(models.Model):
 
 
 
-class EscalationDepartment(models.Model):
+class EscalationDepartment(BaseModel):
+    id = models.UUIDField(
+        default=uuid.uuid4, unique=True, db_index=True, primary_key=True
+    )
     name = models.CharField(max_length=50)
     business = models.ForeignKey(
         Business, on_delete=models.CASCADE, related_name="escalation_departments",
     )
 
 
-class KnowledgeBase(models.Model):
+class KnowledgeBase(BaseModel):
     business = models.ForeignKey(
         Business, on_delete=models.CASCADE, related_name="business_kb", db_index=True
     )
-    knowledgebase_id = models.CharField(
-        max_length=72, blank=True, null=True, unique=True
+    knowledgebase_id = models.UUIDField(
+        default=uuid.uuid4, unique=True, db_index=True, primary_key=True
     )
     title = models.CharField(max_length=125)
     content = models.CharField(max_length=512)
@@ -120,20 +124,29 @@ class KnowledgeBase(models.Model):
     is_company_description = models.BooleanField(default=False)
 
 
-class Reply(models.Model):
+class Reply(BaseModel):
+    id = models.UUIDField(
+        default=uuid.uuid4, unique=True, db_index=True, primary_key=True
+    )
     reply = models.TextField()
     to_be_escalated = models.BooleanField()
     sentiment = models.CharField(max_length=20)
 
 
-class Category(models.Model):
+class Category(BaseModel):
+    id = models.UUIDField(
+        default=uuid.uuid4, unique=True, db_index=True, primary_key=True
+    )
     name = models.CharField(max_length=100)
 
     def __str__(self):
         return self.name
 
 
-class Product(models.Model):
+class Product(BaseModel):
+    id = models.UUIDField(
+        default=uuid.uuid4, unique=True, db_index=True, primary_key=True
+    )
     category = models.ForeignKey(Category, on_delete=models.CASCADE)
     name = models.CharField(max_length=200)
     description = models.TextField(blank=True)
@@ -145,7 +158,10 @@ class Product(models.Model):
         return self.name
 
 
-class Inventory(models.Model):
+class Inventory(BaseModel):
+    id = models.UUIDField(
+        default=uuid.uuid4, unique=True, db_index=True, primary_key=True
+    )
     product = models.ForeignKey(Product, on_delete=models.CASCADE)
     quantity = models.PositiveIntegerField()
     timestamp = models.DateTimeField(auto_now_add=True)
