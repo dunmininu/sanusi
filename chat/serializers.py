@@ -1,5 +1,6 @@
 from rest_framework import serializers
 from .models import Chat, Customer, Message
+from business.models import Business
 
 
 class CreateChatRequestSerializer(serializers.Serializer):
@@ -11,7 +12,42 @@ class CreateChatRequestSerializer(serializers.Serializer):
 class CustomerSerializer(serializers.ModelSerializer):
     class Meta:
         model = Customer
-        fields = ["id", "name", "email", "phone_number", "identifier"]
+        fields = ["customer_id", "name", "email", "phone_number", "platform", "identifier"]
+        read_only_fields = ["customer_id","identifier"]  # Prevent user from manually setting it
+    
+    def create(self, validated_data):
+        request = self.context.get("request")
+        user = request.user
+        company_id = self.context["view"].kwargs.get("company_id")
+        if not company_id or not Business.objects.filter(company_id=company_id).exists():
+            raise serializers.ValidationError("Invalid or missing company_id.")
+
+        try:
+            business = user.businesses.get(company_id=company_id)
+        except Business.DoesNotExist:
+            raise serializers.ValidationError("Invalid business for current user.")
+        customer = Customer(**validated_data)
+        customer.business = business
+        customer.identifier = customer.generate_identifier()
+        customer.save()
+        return customer
+    
+    def update(self, instance, validated_data):
+        request = self.context.get("request")
+        user = request.user
+        company_id = self.context["view"].kwargs.get("company_id")
+        if not company_id or not Business.objects.filter(company_id=company_id).exists():
+            raise serializers.ValidationError("Invalid or missing company_id.")
+        try:
+            business = user.businesses.get(company_id=company_id)
+            company_id == business.company_id
+        except Business.DoesNotExist:
+            raise serializers.ValidationError("Invalid business for current user.")
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+        instance.save()
+        return instance
+
 
 
 class MessageSerializer(serializers.ModelSerializer):

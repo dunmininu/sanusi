@@ -1,10 +1,13 @@
 import uuid
 from django.db import models
 from django.contrib.postgres.fields import ArrayField
+from business.models import Business
 
 # from business.models import Business
 
-
+class ActiveManager(models.Manager):
+    def get_queryset(self):
+        return super().get_queryset().filter(is_deleted=False)
 class ChatStatus(models.TextChoices):
     ACTIVE = ("active", "all active chats")
     RESOLVED = ("resolved", "all resolved chats")
@@ -13,22 +16,38 @@ class ChatStatus(models.TextChoices):
 class ChannelChoices(models.TextChoices):
     EMAIL = ("email", "Email address")
     CHAT = ("chat", "Sanusi Chat Channel")
+    WHATSAPP = ("whatsapp", "Business Whatsapp channel")
     FACEBOOK = ("facebook", "Business facebook channel")
     TELEGRAM = ("telegram", "Business Telegram channel")
     TWITTER = ("twitter", "Business Twitter channel")
 
 
 class Customer(models.Model):
+    # Unique identifier for the subscription
+    customer_id = models.CharField(
+        max_length=256, unique=True, db_index=True, primary_key=True
+    )
+    business = models.ForeignKey(
+        Business, on_delete=models.CASCADE, related_name="customer",
+    )
     name = models.CharField(max_length=256)
     email = models.EmailField(null=True, blank=True)
     phone_number = models.CharField(max_length=20, null=True, blank=True)
+    platform = models.CharField(max_length=256, null=True, blank=True)
     identifier = models.CharField(max_length=256, null=True, blank=True, unique=True)
+    date_created = models.DateTimeField(auto_now_add=True, null=True)
+    last_updated = models.DateTimeField(auto_now=True, null=True)
+    is_deleted = models.BooleanField(default=False)
+
+    objects = ActiveManager()          # Default: only non-deleted
+    all_objects = models.Manager()     # Includes soft-deleted
 
     def generate_identifier(self):
         name = self.name.replace(" ", "")
         identifier = name + "_" + str(uuid.uuid4().hex[:8])
         self.identifier = identifier
         self.save()
+        return identifier
 
     def __str__(self):
         return self.name
