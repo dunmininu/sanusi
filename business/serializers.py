@@ -117,8 +117,11 @@ class BusinessSerializer(serializers.ModelSerializer):
         return data
 
     def create(self, validated_data):
+        request = self.context.get("request")
+        user = request.user
         escalation_departments_data = validated_data.pop("escalation_departments")
         business = Business.objects.create(**validated_data)
+        user.businesses.add(business)
 
         for department_data in escalation_departments_data:
             EscalationDepartment.objects.create(business=business, **department_data)

@@ -24,6 +24,7 @@ from drf_yasg import openapi
 
 from business.urls import router as business_router
 from chat.urls import router as chat_router
+from accounts.urls import router as accounts_router
 
 # schema_view = get_schema_view(
 #     openapi.Info(
@@ -86,12 +87,13 @@ schema_view = get_schema_view(
 combine_router = routers.DefaultRouter()
 combine_router.registry.extend(business_router.registry)
 combine_router.registry.extend(chat_router.registry)
+combine_router.registry.extend(accounts_router.registry)
 
 urlpatterns = [
     path("admin/", admin.site.urls),
     path("api/sanusi/", include("sanusi.urls")),
     path("api/", include(combine_router.urls)),
-    path("", include("frontend.urls")),
+    # path("", include("frontend.urls")),
 ]
 
 if settings.DEBUG:

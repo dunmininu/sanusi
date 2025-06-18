@@ -71,8 +71,8 @@ class User(AbstractBaseUser, PermissionsMixin):
         #     # Define additional permissions as required
         # ]
 
-    def save(self):
-        self.uuid = None
+    # def save(self):
+    #     self.uuid = None
 
     # Define related_name for groups and user_permissions
 

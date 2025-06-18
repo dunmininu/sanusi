@@ -10,6 +10,7 @@ from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.exceptions import ValidationError
+from rest_framework.permissions import IsAuthenticated
 from rest_framework import status, viewsets, generics, mixins, filters
 from drf_yasg.utils import swagger_auto_schema, no_body
 from drf_yasg import openapi
@@ -30,6 +31,7 @@ class BusinessApiViewSet(viewsets.ModelViewSet):
     queryset = Business.objects.all()
     serializer_class = BusinessSerializer
     lookup_field = "company_id"
+    permission_classes = [IsAuthenticated] 
 
     def get_object(self):
         return get_object_or_404(Business, company_id=self.kwargs.get("company_id"))
@@ -98,6 +100,7 @@ class KnowledgeBaseViewSet(
     serializer_class = KnowledgeBaseSerializer
     filter_backends = [filters.SearchFilter]
     search_fields = ["is_company_description"]
+    permission_classes = [IsAuthenticated] 
 
     def perform_update(self, serializer):
         serializer.save()
@@ -244,6 +247,7 @@ class KnowledgeBaseViewSet(
 
 class SanusiBusinessViewSet(mixins.CreateModelMixin, viewsets.GenericViewSet):
     serializer_class = SanusiBusinessCreateSerializer
+    permission_classes = [IsAuthenticated] 
 
     @transaction.atomic
     def create(self, request):

@@ -53,6 +53,7 @@ INSTALLED_APPS = (
     "django.contrib.admin",
     # third party libraries
     "rest_framework",
+    "rest_framework_simplejwt",
     "rest_framework.authtoken",
     "rest_framework_simplejwt.token_blacklist",
     # "debug_toolbar",

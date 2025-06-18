@@ -5,6 +5,8 @@ from django.contrib.auth import password_validation, get_user_model
 from rest_framework import serializers
 
 from accounts.models import EmailAddress
+import logging
+logger = logging.getLogger(__name__)
 
 User = get_user_model()
 
@@ -22,12 +24,20 @@ def validate_user_password_attribute_similarity(password, user):
 
 class RegisterSerializer(serializers.Serializer):
     email = serializers.EmailField(required=True)
-    password = serializers.CharField()
+    password = serializers.CharField(
+        write_only=True,
+        min_length=8,
+        style={'input_type': 'password'}
+    )
+    password_confirm = serializers.CharField(
+        write_only=True,
+        style={'input_type': 'password'}
+    )
 
     def email_address_exists(self, email):
         user_exists = User.objects.filter(email__iexact=email).exists()
         if not user_exists:
-            user_exists = EmailAddress.objects.filter(email__iexact=email)
+            user_exists = EmailAddress.objects.filter(email__iexact=email).exists()
         return user_exists
 
     def validate_email(self, value):
@@ -36,8 +46,23 @@ class RegisterSerializer(serializers.Serializer):
         return value
 
     def validate_password(self, value):
-        password_validation.validate_password(value)
+        try:
+            password_validation.validate_password(value)
+        except ValidationError as e:
+            raise serializers.ValidationError(e.messages)
         return value
+
+    def validate(self, attrs):
+        """Validate that passwords match"""
+        password = attrs.get('password')
+        password_confirm = attrs.get('password_confirm')
+        
+        if password != password_confirm:
+            raise serializers.ValidationError({
+                'password_confirm': 'Passwords do not match.'
+            })
+        
+        return attrs
 
     def save(self):
         email = self.validated_data["email"]
@@ -55,12 +80,44 @@ class RegisterSerializer(serializers.Serializer):
 
 
 class UserSerializer(serializers.ModelSerializer):
-    model = User
-    fields = [
-        "first_name",
-        "last_name",
-        "email",
-        "is_staff",
-        "date_joined",
-        "is_active",
-    ]
+    class Meta:
+        model = User
+        fields = [
+            "first_name",
+            "last_name",
+            "email",
+            "is_staff",
+            "date_joined",
+            "is_active",
+        ]
+
+        read_only_fields = [
+            "id",
+            "is_staff", 
+            "date_joined",
+            "is_active"
+        ]
+
+class LoginSerializer(serializers.Serializer):
+    email = serializers.EmailField()
+    password = serializers.CharField(
+        write_only=True,
+        style={'input_type': 'password'}
+    )
+    
+    def validate(self, attrs):
+        email = attrs.get('email')
+        password = attrs.get('password')
+        
+        if email and password:
+            # Check if user exists
+            try:
+                user = User.objects.get(email__iexact=email)
+            except User.DoesNotExist:
+                raise serializers.ValidationError("Invalid email or password.")
+            
+            # Check if user is active
+            if not user.is_active:
+                raise serializers.ValidationError("User account is disabled.")
+        
+        return attrs
