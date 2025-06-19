@@ -1,7 +1,7 @@
 from rest_framework import serializers
 from .models import Chat, Customer, Message
 from business.models import Business
-
+from sanusi_backend.utils.error_handler import ErrorHandler
 
 class CreateChatRequestSerializer(serializers.Serializer):
     name = serializers.CharField()
@@ -20,12 +20,22 @@ class CustomerSerializer(serializers.ModelSerializer):
         user = request.user
         company_id = self.context["view"].kwargs.get("company_id")
         if not company_id or not Business.objects.filter(company_id=company_id).exists():
-            raise serializers.ValidationError("Invalid or missing company_id.")
+            ErrorHandler.validation_error(
+                message="Valid Company ID required",
+                field="company_id", 
+                error_code="INVALID_COMPANY_ID",
+                extra_data={"provided_id": company_id}
+            )
 
         try:
             business = user.businesses.get(company_id=company_id)
         except Business.DoesNotExist:
-            raise serializers.ValidationError("Invalid business for current user.")
+            ErrorHandler.validation_error(
+                message="Invalid business for current user.",
+                field="company_id", 
+                error_code="INVALID_COMPANY_ID",
+                extra_data={"provided_id": company_id}
+            )
         customer = Customer(**validated_data)
         customer.business = business
         customer.identifier = customer.generate_identifier()
@@ -37,12 +47,22 @@ class CustomerSerializer(serializers.ModelSerializer):
         user = request.user
         company_id = self.context["view"].kwargs.get("company_id")
         if not company_id or not Business.objects.filter(company_id=company_id).exists():
-            raise serializers.ValidationError("Invalid or missing company_id.")
+            ErrorHandler.validation_error(
+                message="Valid Company ID required",
+                field="company_id", 
+                error_code="INVALID_COMPANY_ID",
+                extra_data={"provided_id": company_id}
+            )
         try:
             business = user.businesses.get(company_id=company_id)
             company_id == business.company_id
         except Business.DoesNotExist:
-            raise serializers.ValidationError("Invalid business for current user.")
+            ErrorHandler.validation_error(
+                message="Invalid business for current user.",
+                field="company_id", 
+                error_code="INVALID_COMPANY_ID",
+                extra_data={"provided_id": company_id}
+            )
         for attr, value in validated_data.items():
             setattr(instance, attr, value)
         instance.save()

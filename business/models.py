@@ -138,6 +138,9 @@ class Category(BaseModel):
         default=uuid.uuid4, unique=True, db_index=True, primary_key=True
     )
     name = models.CharField(max_length=100)
+    business = models.ForeignKey(
+        Business, on_delete=models.CASCADE, related_name="category", db_index=True
+    )
 
     def __str__(self):
         return self.name
@@ -149,13 +152,46 @@ class Product(BaseModel):
     )
     category = models.ForeignKey(Category, on_delete=models.CASCADE)
     name = models.CharField(max_length=200)
+    sku = models.CharField(max_length=200, unique=True)
     description = models.TextField(blank=True)
     price = models.DecimalField(max_digits=10, decimal_places=2)
     stock_quantity = models.PositiveIntegerField()
-    image = models.ImageField(upload_to="product_images/", blank=True, null=True)
+    image = models.URLField(blank=True, null=True)
+    business = models.ForeignKey(
+        Business, on_delete=models.CASCADE, related_name="product", db_index=True
+    )
+    bundle = models.JSONField(default=dict)
 
     def __str__(self):
         return self.name
+    
+    def add_to_bundle(self, item, quantity=1):
+        """Add an item to the bundle"""
+        if isinstance(self.bundle, dict):
+            self.bundle[item] = self.bundle.get(item, 0) + quantity
+        elif isinstance(self.bundle, list):
+            self.bundle.append(item)
+        self.save(update_fields=['bundle'])
+    
+    def remove_from_bundle(self, item):
+        """Remove an item from the bundle"""
+        if isinstance(self.bundle, dict) and item in self.bundle:
+            del self.bundle[item]
+        elif isinstance(self.bundle, list) and item in self.bundle:
+            self.bundle.remove(item)
+        self.save(update_fields=['bundle'])
+    
+    def get_bundle_items(self):
+        """Get all items in the bundle"""
+        if isinstance(self.bundle, dict):
+            return list(self.bundle.keys())
+        return self.bundle or []
+    
+    def has_item_in_bundle(self, item):
+        """Check if an item is in the bundle"""
+        if isinstance(self.bundle, dict):
+            return item in self.bundle
+        return item in (self.bundle or [])
 
 
 class Inventory(BaseModel):

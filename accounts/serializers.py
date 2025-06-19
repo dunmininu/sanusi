@@ -89,13 +89,15 @@ class UserSerializer(serializers.ModelSerializer):
             "is_staff",
             "date_joined",
             "is_active",
+            "businesses",
         ]
 
         read_only_fields = [
             "id",
             "is_staff", 
             "date_joined",
-            "is_active"
+            "is_active",
+            "businesses",
         ]
 
 class LoginSerializer(serializers.Serializer):

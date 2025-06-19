@@ -87,6 +87,7 @@ class AuthenticationViewSet(viewsets.GenericViewSet):
                                 'email': openapi.Schema(type=openapi.TYPE_STRING),
                                 'first_name': openapi.Schema(type=openapi.TYPE_STRING),
                                 'last_name': openapi.Schema(type=openapi.TYPE_STRING),
+                                'businesses':openapi.Schema(type=openapi.TYPE_STRING),
                             }
                         )
                     }

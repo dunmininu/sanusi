@@ -4,6 +4,7 @@ from django.shortcuts import get_object_or_404
 from django.db import transaction, models
 from django.core.exceptions import ObjectDoesNotExist
 from django.db.models import Case, When
+from loguru import logger
 
 
 from rest_framework import viewsets, status
@@ -14,8 +15,13 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework import status, viewsets, generics, mixins, filters
 from drf_yasg.utils import swagger_auto_schema, no_body
 from drf_yasg import openapi
+from django_filters import FilterSet, CharFilter, DateTimeFilter, NumberFilter
+import django_filters
 
-from .models import Business
+from opentelemetry import trace
+from sanusi_backend.utils.error_handler import ErrorHandler, LogicException
+
+from .models import Business, Product, Category
 from business.private.models import KnowledgeBase, EscalationDepartment
 from .serializers import (
     BulkCreateKnowledgeBaseSerializer,
@@ -24,7 +30,10 @@ from .serializers import (
     KnowledgeBaseDeleteSerializer,
     KnowledgeBaseSerializer,
     SanusiBusinessCreateSerializer,
+    InventorySerializer,
+    CategorySerializer
 )
+from sanusi_backend.classes.custom import  CustomPagination
 
 
 class BusinessApiViewSet(viewsets.ModelViewSet):
@@ -38,14 +47,64 @@ class BusinessApiViewSet(viewsets.ModelViewSet):
 
     @transaction.atomic
     def create(self, request, *args, **kwargs):
-        serializer = self.get_serializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        self.perform_create(serializer)
+        tracer = trace.get_tracer(__name__)
+        with tracer.start_as_current_span("create_business") as span:
+            try:
+                # Set telemetry attributes
+                span.set_attribute("user.id", str(request.user.id))
+                span.set_attribute("user.email", request.user.email)
+                span.set_attribute("request.path", request.path)
+                span.set_attribute("request.method", request.method)
+                
+                # Log sensitive data carefully - avoid logging passwords, tokens, etc.
+                safe_data = {k: v for k, v in request.data.items() 
+                           if k not in ['password', 'token', 'secret', 'key', 'access']}
+                span.set_attribute("request.data_keys", list(safe_data.keys()))
+                
+                # Log request start
+                logger.info(
+                    "Creating business",
+                    user_id=str(request.user.id),
+                    user_email=request.user.email,
+                    data_keys=list(safe_data.keys())
+                )
+                serializer = self.get_serializer(data=request.data)
+                serializer.is_valid(raise_exception=True)
+                self.perform_create(serializer)
 
-        headers = self.get_success_headers(serializer.data)
-        return Response(
-            serializer.data, status=status.HTTP_201_CREATED, headers=headers
-        )
+                # Set success attributes
+                span.set_attribute("business.id", str(serializer.instance.company_id))
+                span.set_attribute("operation.success", True)
+                
+                # Log success
+                logger.info(
+                    "Business created successfully",
+                    business_id=str(serializer.instance.company_id),
+                    user_id=str(request.user.id)
+                )
+
+                headers = self.get_success_headers(serializer.data)
+                return Response(
+                    serializer.data, status=status.HTTP_201_CREATED, headers=headers
+                )
+            except Exception as e:
+                # Handle unexpected exceptions
+                # Handle unexpected exceptions
+                span.set_attribute("operation.success", False)
+                span.set_attribute("error.type", type(e).__name__)
+                span.set_attribute("error.unexpected", True)
+                ErrorHandler.log_and_raise(
+                    message=f"Unexpected error creating business: {str(e)}",
+                    exception_class=LogicException,
+                    error_code="UNEXPECTED_ERROR",
+                    status_code=500,
+                    log_level="critical",
+                    extra_data={
+                        "exception_type": type(e).__name__,
+                        "user_id": str(request.user.id)
+                    }
+                )
+
 
     @swagger_auto_schema(
         manual_parameters=[
@@ -70,13 +129,63 @@ class BusinessApiViewSet(viewsets.ModelViewSet):
             )
         ]
     )
+    @transaction.atomic
     def update(self, request, *args, **kwargs):
-        partial = kwargs.pop("partial", False)
-        instance = self.get_object()
-        serializer = self.get_serializer(instance, data=request.data, partial=partial)
-        serializer.is_valid(raise_exception=True)
-        self.perform_update(serializer)
-        return Response(serializer.data)
+        tracer = trace.get_tracer(__name__)
+        with tracer.start_as_current_span("update_business") as span:
+            try:
+                # Set telemetry attributes
+                span.set_attribute("user.id", str(request.user.id))
+                span.set_attribute("user.email", request.user.email)
+                span.set_attribute("request.path", request.path)
+                span.set_attribute("request.method", request.method)
+                
+                # Log sensitive data carefully - avoid logging passwords, tokens, etc.
+                safe_data = {k: v for k, v in request.data.items() 
+                           if k not in ['password', 'token', 'secret', 'key', 'access']}
+                span.set_attribute("request.data_keys", list(safe_data.keys()))
+
+                # Log request start
+                logger.info(
+                    "update business",
+                    user_id=str(request.user.id),
+                    user_email=request.user.email,
+                    data_keys=list(safe_data.keys())
+                )
+                partial = kwargs.pop("partial", False)
+                instance = self.get_object()
+                serializer = self.get_serializer(instance, data=request.data, partial=partial)
+                serializer.is_valid(raise_exception=True)
+                self.perform_update(serializer)
+
+                # Set success attributes
+                span.set_attribute("business.id", str(serializer.instance.company_id))
+                span.set_attribute("operation.success", True)
+                
+                # Log success
+                logger.info(
+                    "Business update successfully",
+                    business_id=str(serializer.instance.company_id),
+                    user_id=str(request.user.id)
+                )
+                return Response(serializer.data)
+            except Exception as e:
+                # Handle unexpected exceptions
+                # Handle unexpected exceptions
+                span.set_attribute("operation.success", False)
+                span.set_attribute("error.type", type(e).__name__)
+                span.set_attribute("error.unexpected", True)
+                ErrorHandler.log_and_raise(
+                    message=f"Unexpected error update business: {str(e)}",
+                    exception_class=LogicException,
+                    error_code="UNEXPECTED_ERROR",
+                    status_code=500,
+                    log_level="critical",
+                    extra_data={
+                        "exception_type": type(e).__name__,
+                        "user_id": str(request.user.id)
+                    }
+                )
 
     def list(self, request, *args, **kwargs):
         return super().list(request, *args, **kwargs)
@@ -300,3 +409,366 @@ class SanusiBusinessViewSet(mixins.CreateModelMixin, viewsets.GenericViewSet):
             "token": token,
         }
         return Response(response_data, status=status.HTTP_201_CREATED)
+
+
+
+# Custom Filter Class
+class ProductFilter(FilterSet):
+    name = CharFilter(field_name='name', lookup_expr='icontains')
+    category = NumberFilter(field_name='category__id')  # Filter by category ID
+    category_name = CharFilter(field_name='category__name', lookup_expr='icontains')  # Filter by category name
+    sku = CharFilter(field_name='sku', lookup_expr='icontains')
+    date_created_after = DateTimeFilter(field_name='date_created', lookup_expr='gte')
+    date_created_before = DateTimeFilter(field_name='date_created', lookup_expr='lte')
+    last_updated_after = DateTimeFilter(field_name='last_updated', lookup_expr='gte')
+    last_updated_before = DateTimeFilter(field_name='last_updated', lookup_expr='lte')
+    
+    class Meta:
+        model = Product
+        fields = ['name', 'category', 'category_name', 'sku', 'date_created_after', 'date_created_before', 
+                 'last_updated_after', 'last_updated_before']
+class InventoryViewSet(
+    mixins.ListModelMixin, mixins.DestroyModelMixin, viewsets.GenericViewSet, mixins.CreateModelMixin,
+    mixins.UpdateModelMixin,
+):
+    queryset = Product.objects.all()
+    serializer_class = InventorySerializer
+    lookup_field = "id"
+    permission_classes = [IsAuthenticated] 
+
+    def get_object(self):
+        return get_object_or_404(Product, id=self.kwargs.get("id"))
+   
+    filter_backends = [
+        django_filters.rest_framework.DjangoFilterBackend,
+        filters.SearchFilter,
+        filters.OrderingFilter
+    ]
+    filterset_class = ProductFilter
+    search_fields = ['name', 'category_name', 'sku']
+    ordering_fields = ['date_created', 'last_updated', 'name', 'category_name', 'sku']
+    ordering = ['-date_created']  # Default ordering
+    pagination_class = CustomPagination
+    queryset = Product.objects.all()
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        company_id = self.kwargs.get("company_id")
+        if company_id:
+            queryset = queryset.filter(business_id=company_id)
+        return queryset
+    
+    def list(self, request, *args, **kwargs):
+        """
+        List customers with filtering and pagination
+        
+        Query Parameters:
+        - name: Filter by name (case-insensitive partial match)
+        - email: Filter by email (case-insensitive partial match)
+        - date_created_after: Filter customers created after this date (YYYY-MM-DD or YYYY-MM-DD HH:MM:SS)
+        - date_created_before: Filter customers created before this date
+        - last_updated_after: Filter customers updated after this date
+        - last_updated_before: Filter customers updated before this date
+        - search: Search across name, email, and phone number
+        - ordering: Order by field (prefix with - for descending)
+        - page: Page number
+        - page_size: Number of items per page (max 100)
+        
+        Examples:
+        /customers/?name=john&email=gmail
+        /customers/?date_created_after=2023-01-01&date_created_before=2023-12-31
+        /customers/?search=john&ordering=-date_created&page=2&page_size=50
+        """
+        return super().list(request, *args, **kwargs)
+    
+    
+    @transaction.atomic
+    def create(self, request, *args, **kwargs):
+        tracer = trace.get_tracer(__name__)
+        with tracer.start_as_current_span("create_product") as span:
+            try:
+                # Set telemetry attributes
+                span.set_attribute("user.id", str(request.user.id))
+                span.set_attribute("user.email", request.user.email)
+                span.set_attribute("request.path", request.path)
+                span.set_attribute("request.method", request.method)
+                
+                # Log sensitive data carefully - avoid logging passwords, tokens, etc.
+                safe_data = {k: v for k, v in request.data.items() 
+                           if k not in ['password', 'token', 'secret', 'key', 'access']}
+                span.set_attribute("request.data_keys", list(safe_data.keys()))
+
+                # Log request start
+                logger.info(
+                    "Creating product",
+                    user_id=str(request.user.id),
+                    user_email=request.user.email,
+                    data_keys=list(safe_data.keys())
+                )
+
+                serializer = self.get_serializer(data=request.data)
+                serializer.is_valid(raise_exception=True)
+                self.perform_create(serializer)
+
+                # Set success attributes
+                span.set_attribute("product.id", str(serializer.instance.product.id))
+                span.set_attribute("operation.success", True)
+                
+                # Log success
+                logge.info(
+                    "product created successfully",
+                    product_id=str(serializer.instance.prouct.id),
+                    user_id=str(request.user.id)
+                )
+
+
+                headers = self.get_success_headers(serializer.data)
+                return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
+            except Exception as e:
+                # Handle unexpected exceptions
+                span.set_attribute("operation.success", False)
+                span.set_attribute("error.type", type(e).__name__)
+                span.set_attribute("error.unexpected", True)
+                ErrorHandler.log_and_raise(
+                    message=f"Unexpected error creating product: {str(e)}",
+                    exception_class=LogicException,
+                    error_code="UNEXPECTED_ERROR",
+                    status_code=500,
+                    log_level="critical",
+                    extra_data={
+                        "exception_type": type(e).__name__,
+                        "user_id": str(request.user.id)
+                    }
+                )
+
+    
+    @transaction.atomic
+    def update(self, request, *args, **kwargs):
+        tracer = trace.get_tracer(__name__)
+        with tracer.start_as_current_span("update_product") as span:
+            try:
+                # Set telemetry attributes
+                span.set_attribute("user.id", str(request.user.id))
+                span.set_attribute("user.email", request.user.email)
+                span.set_attribute("request.path", request.path)
+                span.set_attribute("request.method", request.method)
+                
+                # Log sensitive data carefully - avoid logging passwords, tokens, etc.
+                safe_data = {k: v for k, v in request.data.items() 
+                           if k not in ['password', 'token', 'secret', 'key', 'access']}
+                span.set_attribute("request.data_keys", list(safe_data.keys()))
+
+                # Log request start
+                logger.info(
+                    "Updating product",
+                    user_id=str(request.user.id),
+                    user_email=request.user.email,
+                    data_keys=list(safe_data.keys())
+                )
+
+                serializer = self.get_serializer(data=request.data)
+                serializer.is_valid(raise_exception=True)
+                self.perform_create(serializer)
+
+                # Set success attributes
+                span.set_attribute("product.id", str(serializer.instance.product.id))
+                span.set_attribute("operation.success", True)
+                
+                # Log success
+                logge.info(
+                    "product updated successfully",
+                    product_id=str(serializer.instance.prouct.id),
+                    user_id=str(request.user.id)
+                )
+
+
+                headers = self.get_success_headers(serializer.data)
+                return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
+            except Exception as e:
+                # Handle unexpected exceptions
+                span.set_attribute("operation.success", False)
+                span.set_attribute("error.type", type(e).__name__)
+                span.set_attribute("error.unexpected", True)
+                ErrorHandler.log_and_raise(
+                    message=f"Unexpected error update product: {str(e)}",
+                    exception_class=LogicException,
+                    error_code="UNEXPECTED_ERROR",
+                    status_code=500,
+                    log_level="critical",
+                    extra_data={
+                        "exception_type": type(e).__name__,
+                        "user_id": str(request.user.id)
+                    }
+                )
+
+class CategoryViewSet(
+    mixins.ListModelMixin, mixins.DestroyModelMixin, viewsets.GenericViewSet, mixins.CreateModelMixin,
+    mixins.UpdateModelMixin,
+):
+    queryset = Category.objects.all()
+    serializer_class = CategorySerializer
+    lookup_field = "id"
+    permission_classes = [IsAuthenticated] 
+
+    def get_object(self):
+        return get_object_or_404(Product, id=self.kwargs.get("id"))
+   
+    filter_backends = [
+        django_filters.rest_framework.DjangoFilterBackend,
+        filters.SearchFilter,
+        filters.OrderingFilter
+    ]
+    filterset_fields = ['name']
+    search_fields = ['name']
+    ordering_fields = ['date_created', 'last_updated', 'name']
+    ordering = ['-date_created']  # Default ordering
+    pagination_class = CustomPagination
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        company_id = self.kwargs.get("id")
+        if company_id:
+            queryset = queryset.filter(id=id)
+        return queryset
+    
+
+    def list(self, request, *args, **kwargs):
+        """
+        List customers with filtering and pagination
+        
+        Query Parameters:
+        - name: Filter by name (case-insensitive partial match)
+        - date_created_after: Filter customers created after this date (YYYY-MM-DD or YYYY-MM-DD HH:MM:SS)
+        - date_created_before: Filter customers created before this date
+        - last_updated_after: Filter customers updated after this date
+        - last_updated_before: Filter customers updated before this date
+        - search: Search across name
+        - ordering: Order by field (prefix with - for descending)
+        - page: Page number
+        - page_size: Number of items per page (max 100)
+        
+        """
+        return super().list(request, *args, **kwargs)
+    
+
+    @transaction.atomic
+    def create(self, request, *args, **kwargs):
+        tracer = trace.get_tracer(__name__)
+        with tracer.start_as_current_span("create_category") as span:
+            try:
+                # Set telemetry attributes
+                span.set_attribute("user.id", str(request.user.id))
+                span.set_attribute("user.email", request.user.email)
+                span.set_attribute("request.path", request.path)
+                span.set_attribute("request.method", request.method)
+                
+                # Log sensitive data carefully - avoid logging passwords, tokens, etc.
+                safe_data = {k: v for k, v in request.data.items() 
+                           if k not in ['password', 'token', 'secret', 'key', 'access']}
+                span.set_attribute("request.data_keys", list(safe_data.keys()))
+
+                # Log request start
+                logger.info(
+                    "Creating category",
+                    user_id=str(request.user.id),
+                    user_email=request.user.email,
+                    data_keys=list(safe_data.keys())
+                )
+
+                serializer = self.get_serializer(data=request.data)
+                serializer.is_valid(raise_exception=True)
+                self.perform_create(serializer)
+
+                # Set success attributes
+                span.set_attribute("category.id", str(serializer.instance.category.id))
+                span.set_attribute("operation.success", True)
+                
+                # Log success
+                logge.info(
+                    "category created successfully",
+                    category_id=str(serializer.instance.category.id),
+                    user_id=str(request.user.id)
+                )
+
+
+                headers = self.get_success_headers(serializer.data)
+                return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
+            except Exception as e:
+                # Handle unexpected exceptions
+                span.set_attribute("operation.success", False)
+                span.set_attribute("error.type", type(e).__name__)
+                span.set_attribute("error.unexpected", True)
+                ErrorHandler.log_and_raise(
+                    message=f"Unexpected error creating category: {str(e)}",
+                    exception_class=LogicException,
+                    error_code="UNEXPECTED_ERROR",
+                    status_code=500,
+                    log_level="critical",
+                    extra_data={
+                        "exception_type": type(e).__name__,
+                        "user_id": str(request.user.id)
+                    }
+                )
+
+    
+    @transaction.atomic
+    def update(self, request, *args, **kwargs):
+        tracer = trace.get_tracer(__name__)
+        with tracer.start_as_current_span("update_category") as span:
+            try:
+                # Set telemetry attributes
+                span.set_attribute("user.id", str(request.user.id))
+                span.set_attribute("user.email", request.user.email)
+                span.set_attribute("request.path", request.path)
+                span.set_attribute("request.method", request.method)
+                
+                # Log sensitive data carefully - avoid logging passwords, tokens, etc.
+                safe_data = {k: v for k, v in request.data.items() 
+                           if k not in ['password', 'token', 'secret', 'key', 'access']}
+                span.set_attribute("request.data_keys", list(safe_data.keys()))
+
+                # Log request start
+                logger.info(
+                    "Updating category",
+                    user_id=str(request.user.id),
+                    user_email=request.user.email,
+                    data_keys=list(safe_data.keys())
+                )
+
+                serializer = self.get_serializer(data=request.data)
+                serializer.is_valid(raise_exception=True)
+                self.perform_create(serializer)
+
+                # Set success attributes
+                span.set_attribute("category.id", str(serializer.instance.category.id))
+                span.set_attribute("operation.success", True)
+                
+                # Log success
+                logge.info(
+                    "category updated successfully",
+                    category_id=str(serializer.instance.category.id),
+                    user_id=str(request.user.id)
+                )
+
+
+                headers = self.get_success_headers(serializer.data)
+                return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
+            except Exception as e:
+                # Handle unexpected exceptions
+                span.set_attribute("operation.success", False)
+                span.set_attribute("error.type", type(e).__name__)
+                span.set_attribute("error.unexpected", True)
+                ErrorHandler.log_and_raise(
+                    message=f"Unexpected error update category: {str(e)}",
+                    exception_class=LogicException,
+                    error_code="UNEXPECTED_ERROR",
+                    status_code=500,
+                    log_level="critical",
+                    extra_data={
+                        "exception_type": type(e).__name__,
+                        "user_id": str(request.user.id)
+                    }
+                )
+
+    
+    

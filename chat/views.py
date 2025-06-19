@@ -18,8 +18,12 @@ from rest_framework.pagination import PageNumberPagination
 from rest_framework import viewsets, status, mixins, filters
 from rest_framework.decorators import action
 from rest_framework.response import Response
+from rest_framework.permissions import IsAuthenticated
 from drf_yasg.utils import swagger_auto_schema, no_body
 from drf_yasg import openapi
+from loguru import logger as loggeru
+from opentelemetry import trace
+from sanusi_backend.utils.error_handler import ErrorHandler, LogicException
 
 # from llama_index import GPTVectorStoreIndex
 # from llama_index.data_structs.node import Node
@@ -60,6 +64,8 @@ from sanusi.utils import (
     try_parse_json,
 )
 
+from sanusi_backend.classes.custom import  CustomPagination
+
 
 instructions_for_auto_response = "Return your response as each of these parameters in a JSON format. Json format should be {'response': '[Generated response based on the information provided]',set escalation_department to 'none' if escalate Issue is false 'escalate Issue : boolean, 'escalation_department': '[sales/operations/billing/engineering]', 'severity': '[low/medium/high]','sentiment': '[positive/negative/neutral]'}."
 
@@ -84,12 +90,6 @@ chat_context_instructions = json_data["chat_context_instructions"]
 valid_channels = ["chat", "whatsapp", "telegram", "instagram", "tiktok"]
 
 
-# Custom Pagination Class
-class CustomerPagination(PageNumberPagination):
-    page_size = 20
-    page_size_query_param = 'page_size'
-    max_page_size = 50
-
 # Custom Filter Class
 class CustomerFilter(FilterSet):
     name = CharFilter(field_name='name', lookup_expr='icontains')
@@ -110,6 +110,7 @@ class CustomerViewSet(
     mixins.UpdateModelMixin,
 ):
     serializer_class = CustomerSerializer
+    permission_classes = [IsAuthenticated] 
     filter_backends = [
         django_filters.rest_framework.DjangoFilterBackend,
         filters.SearchFilter,
@@ -119,7 +120,7 @@ class CustomerViewSet(
     search_fields = ['name', 'email', 'phone_number']
     ordering_fields = ['date_created', 'last_updated', 'name', 'email']
     ordering = ['-date_created']  # Default ordering
-    pagination_class = CustomerPagination
+    pagination_class = CustomPagination
     queryset = Customer.objects.all()
 
     def get_queryset(self):
@@ -154,21 +155,119 @@ class CustomerViewSet(
 
     @transaction.atomic
     def create(self, request, *args, **kwargs):
-        serializer = self.get_serializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        self.perform_create(serializer)
+        tracer = trace.get_tracer(__name__)
+        with tracer.start_as_current_span("create_customer") as span:
+            try:
+                # Set telemetry attributes
+                span.set_attribute("user.id", str(request.user.id))
+                span.set_attribute("user.email", request.user.email)
+                span.set_attribute("request.path", request.path)
+                span.set_attribute("request.method", request.method)
+                
+                # Log sensitive data carefully - avoid logging passwords, tokens, etc.
+                safe_data = {k: v for k, v in request.data.items() 
+                           if k not in ['password', 'token', 'secret', 'key', 'access']}
+                span.set_attribute("request.data_keys", list(safe_data.keys()))
 
-        headers = self.get_success_headers(serializer.data)
-        return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
+                # Log request start
+                loggeru.info(
+                    "Creating customer",
+                    user_id=str(request.user.id),
+                    user_email=request.user.email,
+                    data_keys=list(safe_data.keys())
+                )
+
+                serializer = self.get_serializer(data=request.data)
+                serializer.is_valid(raise_exception=True)
+                self.perform_create(serializer)
+
+                # Set success attributes
+                span.set_attribute("customer.id", str(serializer.instance.customer_id))
+                span.set_attribute("operation.success", True)
+                
+                # Log success
+                loggeru.info(
+                    "Customer created successfully",
+                    customer_id=str(serializer.instance.customer_id),
+                    user_id=str(request.user.id)
+                )
+
+
+                headers = self.get_success_headers(serializer.data)
+                return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
+            except Exception as e:
+                # Handle unexpected exceptions
+                span.set_attribute("operation.success", False)
+                span.set_attribute("error.type", type(e).__name__)
+                span.set_attribute("error.unexpected", True)
+                ErrorHandler.log_and_raise(
+                    message=f"Unexpected error creating customer: {str(e)}",
+                    exception_class=LogicException,
+                    error_code="UNEXPECTED_ERROR",
+                    status_code=500,
+                    log_level="critical",
+                    extra_data={
+                        "exception_type": type(e).__name__,
+                        "user_id": str(request.user.id)
+                    }
+                )
     
     @transaction.atomic
     def update(self, request, *args, **kwargs):
-        partial = kwargs.pop("partial", False)
-        instance = self.get_object()
-        serializer = self.get_serializer(instance, data=request.data, partial=partial)
-        serializer.is_valid(raise_exception=True)
-        self.perform_update(serializer)
-        return Response(serializer.data)
+        tracer = trace.get_tracer(__name__)
+        with tracer.start_as_current_span("update_customer") as span:
+            try:
+                # Set telemetry attributes
+                span.set_attribute("user.id", str(request.user.id))
+                span.set_attribute("user.email", request.user.email)
+                span.set_attribute("request.path", request.path)
+                span.set_attribute("request.method", request.method)
+                
+                # Log sensitive data carefully - avoid logging passwords, tokens, etc.
+                safe_data = {k: v for k, v in request.data.items() 
+                           if k not in ['password', 'token', 'secret', 'key', 'access']}
+                span.set_attribute("request.data_keys", list(safe_data.keys()))
+
+                # Log request start
+                loggeru.info(
+                    "update customer",
+                    user_id=str(request.user.id),
+                    user_email=request.user.email,
+                    data_keys=list(safe_data.keys())
+                )
+                partial = kwargs.pop("partial", False)
+                instance = self.get_object()
+                serializer = self.get_serializer(instance, data=request.data, partial=partial)
+                serializer.is_valid(raise_exception=True)
+                self.perform_update(serializer)
+
+                # Set success attributes
+                span.set_attribute("customer.id", str(serializer.instance.customer_id))
+                span.set_attribute("operation.success", True)
+                
+                # Log success
+                loggeru.info(
+                    "Customer update successfully",
+                    customer_id=str(serializer.instance.customer_id),
+                    user_id=str(request.user.id)
+                )
+                return Response(serializer.data)
+            except Exception as e:
+                # Handle unexpected exceptions
+                span.set_attribute("operation.success", False)
+                span.set_attribute("error.type", type(e).__name__)
+                span.set_attribute("error.unexpected", True)
+                ErrorHandler.log_and_raise(
+                    message=f"Unexpected error update customer: {str(e)}",
+                    exception_class=LogicException,
+                    error_code="UNEXPECTED_ERROR",
+                    status_code=500,
+                    log_level="critical",
+                    extra_data={
+                        "exception_type": type(e).__name__,
+                        "user_id": str(request.user.id)
+                    }
+                )
 
 
 

@@ -14,9 +14,12 @@ from datetime import timedelta
 from pathlib import Path
 from decouple import config
 import os
+from .utils.logging import setup_logging, setup_telemetry
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
+
+
 
 
 # Quick-start development settings - unsuitable for production
@@ -37,6 +40,10 @@ ALLOWED_HOSTS = [
     "localhost",
     "127.0.0.1",
 ]
+
+# Initialize logging and telemetry
+setup_logging()
+setup_telemetry()
 
 
 # Application definition
@@ -175,6 +182,7 @@ REST_FRAMEWORK = {
         'rest_framework.filters.SearchFilter',
         'rest_framework.filters.OrderingFilter',
     ],
+    # "EXCEPTION_HANDLER": "utils.error_handler.custom_exception_handler",
 }
 
 SIMPLE_JWT = {
@@ -242,7 +250,6 @@ SWAGGER_SETTINGS = {
     "DEFAULT_GENERATOR_CLASS": "drf_yasg.generators.OpenAPISchemaGenerator",
     "DEFAULT_API_URL": config(
         "DEFAULT_API_URL", default="http://127.0.0.1:8000"
-        # "DEFAULT_API_URL", default="https://sanusi.enif.ai"
     ),  # Set the base API URL with the desired scheme
     # Other settings...
 }
