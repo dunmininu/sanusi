@@ -5,6 +5,7 @@ from django.contrib.auth.models import AbstractUser, UserManager as DefaultUserM
 from django.contrib.auth.base_user import AbstractBaseUser, BaseUserManager
 from django.contrib.auth.models import PermissionsMixin
 from django.conf import settings
+from sanusi_backend.classes.base_model import BaseModel
 
 from business.models import Business
 
@@ -26,7 +27,10 @@ class UserManager(BaseUserManager):
 
 
 class User(AbstractBaseUser, PermissionsMixin):
-    uuid = models.UUIDField(unique=True, default=uuid_lib.uuid4)
+    id = models.UUIDField(
+        default=uuid_lib.uuid4, unique=True, db_index=True, primary_key=True
+    )
+    # uuid = models.UUIDField(unique=True, default=uuid_lib.uuid4)
     email = models.EmailField(unique=True)
     is_staff = models.BooleanField(default=False)
     first_name = models.CharField(max_length=30, blank=True)
@@ -41,6 +45,7 @@ class User(AbstractBaseUser, PermissionsMixin):
         related_name='user_businesses',
         blank=True,
     )
+    settings = models.JSONField(default=dict)
 
     USERNAME_FIELD = "email"
     REQUIRED_FIELDS = []
@@ -67,14 +72,33 @@ class User(AbstractBaseUser, PermissionsMixin):
         #     # Define additional permissions as required
         # ]
 
-    def save(self):
-        self.uuid = None
+    # def save(self):
+    #     self.uuid = None
+
+    def get_default_business(self):
+        """Helper method to get the default business object"""
+        default_business_id = self.settings.get('default_business')
+        if default_business_id:
+            try:
+                return self.businesses.get(company_id=default_business_id)
+            except Business.DoesNotExist:
+                return None
+        return self.businesses.first() if self.businesses.exists() else None
+
+    def set_default_business(self, business):
+        """Helper method to set a specific business as default"""
+        if business in self.businesses.all():
+            self.settings['default_business'] = str(business.company_id)
+            self.save(update_fields=['settings'])
 
     # Define related_name for groups and user_permissions
 
 
-class EmailAddress(models.Model):
-    uuid = models.UUIDField(unique=True, default=uuid_lib.uuid4)
+class EmailAddress(BaseModel):
+    id = models.UUIDField(
+        default=uuid_lib.uuid4, unique=True, db_index=True, primary_key=True
+    )
+    # uuid = models.UUIDField(unique=True, default=uuid_lib.uuid4)
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         related_name="email_addresses",

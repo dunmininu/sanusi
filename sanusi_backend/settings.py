@@ -14,9 +14,12 @@ from datetime import timedelta
 from pathlib import Path
 from decouple import config
 import os
+from .utils.logging import setup_logging, setup_telemetry
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
+
+
 
 
 # Quick-start development settings - unsuitable for production
@@ -38,6 +41,10 @@ ALLOWED_HOSTS = [
     "127.0.0.1",
 ]
 
+# Initialize logging and telemetry
+setup_logging()
+setup_telemetry()
+
 
 # Application definition
 
@@ -53,6 +60,7 @@ INSTALLED_APPS = (
     "django.contrib.admin",
     # third party libraries
     "rest_framework",
+    "rest_framework_simplejwt",
     "rest_framework.authtoken",
     "rest_framework_simplejwt.token_blacklist",
     # "debug_toolbar",
@@ -169,6 +177,12 @@ REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": (
         "rest_framework_simplejwt.authentication.JWTAuthentication",
     ),
+    'DEFAULT_FILTER_BACKENDS': [
+        'django_filters.rest_framework.DjangoFilterBackend',
+        'rest_framework.filters.SearchFilter',
+        'rest_framework.filters.OrderingFilter',
+    ],
+    # "EXCEPTION_HANDLER": "utils.error_handler.custom_exception_handler",
 }
 
 SIMPLE_JWT = {
@@ -220,6 +234,10 @@ CRISPY_TEMPLATE_PACK = "bootstrap4"
 #     # other origins you want to allow
 # ]
 
+
+# Dev only: allow all origins (for Swagger or local frontend)
+CORS_ALLOW_ALL_ORIGINS = config("DEBUG", cast=bool, default=False)
+
 API_PREFIX = "/api/v1"
 
 
@@ -231,7 +249,7 @@ SWAGGER_SETTINGS = {
     },
     "DEFAULT_GENERATOR_CLASS": "drf_yasg.generators.OpenAPISchemaGenerator",
     "DEFAULT_API_URL": config(
-        "DEFAULT_API_URL", default="https://sanusi.sanusi.ai"
+        "DEFAULT_API_URL", default="http://127.0.0.1:8000"
     ),  # Set the base API URL with the desired scheme
     # Other settings...
 }

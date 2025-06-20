@@ -9,13 +9,21 @@ from django.views.decorators.http import require_http_methods
 from django.db import transaction
 from django.db.models import Q, When, Case, CharField, F, Q, Value
 from django.db.models.functions import Concat
+from django_filters import FilterSet, CharFilter, DateTimeFilter
+import django_filters
+
 
 from rest_framework.response import Response
+from rest_framework.pagination import PageNumberPagination
 from rest_framework import viewsets, status, mixins, filters
 from rest_framework.decorators import action
 from rest_framework.response import Response
+from rest_framework.permissions import IsAuthenticated
 from drf_yasg.utils import swagger_auto_schema, no_body
 from drf_yasg import openapi
+from loguru import logger as loggeru
+from sanusi_backend.decorators.telemetry import with_telemetry
+from sanusi_backend.utils.error_handler import ErrorHandler, LogicException
 
 # from llama_index import GPTVectorStoreIndex
 # from llama_index.data_structs.node import Node
@@ -56,6 +64,8 @@ from sanusi.utils import (
     try_parse_json,
 )
 
+from sanusi_backend.classes.custom import  CustomPagination, BaseSearchFilter
+
 
 instructions_for_auto_response = "Return your response as each of these parameters in a JSON format. Json format should be {'response': '[Generated response based on the information provided]',set escalation_department to 'none' if escalate Issue is false 'escalate Issue : boolean, 'escalation_department': '[sales/operations/billing/engineering]', 'severity': '[low/medium/high]','sentiment': '[positive/negative/neutral]'}."
 
@@ -80,23 +90,167 @@ chat_context_instructions = json_data["chat_context_instructions"]
 valid_channels = ["chat", "whatsapp", "telegram", "instagram", "tiktok"]
 
 
+
+class CustomerFilter(BaseSearchFilter):
+    class Meta(BaseSearchFilter.Meta):
+        model = Customer
+        fields = BaseSearchFilter.Meta.fields + ['email', 'phone_number']
+        # fields = ['phone']  # Only include phone field
+
+# Add custom filters for Customer
+CustomerFilter.add_relation_filter('phone_number', 'phone_number')
+CustomerFilter.add_relation_filter('email', 'email')
+
 class CustomerViewSet(
-    mixins.ListModelMixin, mixins.DestroyModelMixin, viewsets.GenericViewSet
+    mixins.ListModelMixin, mixins.DestroyModelMixin, viewsets.GenericViewSet, mixins.CreateModelMixin,
+    mixins.UpdateModelMixin,
 ):
     serializer_class = CustomerSerializer
+    permission_classes = [IsAuthenticated] 
+    filter_backends = [
+        django_filters.rest_framework.DjangoFilterBackend,
+        filters.SearchFilter,
+        filters.OrderingFilter
+    ]
+    filterset_class = CustomerFilter
+    search_fields = ['name', 'email', 'phone_number']
+    ordering_fields = ['date_created', 'last_updated', 'name', 'email']
+    ordering = ['-date_created']  # Default ordering
+    pagination_class = CustomPagination
     queryset = Customer.objects.all()
 
     def get_queryset(self):
         queryset = super().get_queryset()
-        business_id = self.kwargs.get("business_id")
-        if business_id:
-            queryset = queryset.filter(
-                customer_chats__business_chats__company_id=business_id
-            )
+        company_id = self.kwargs.get("company_id")
+        if company_id:
+            queryset = queryset.filter(business_id=company_id)
         return queryset
 
     def list(self, request, *args, **kwargs):
+        """
+        List customers with filtering and pagination
+        
+        Query Parameters:
+        - name: Filter by name (case-insensitive partial match)
+        - email: Filter by email (case-insensitive partial match)
+        - date_created_after: Filter customers created after this date (YYYY-MM-DD or YYYY-MM-DD HH:MM:SS)
+        - date_created_before: Filter customers created before this date
+        - last_updated_after: Filter customers updated after this date
+        - last_updated_before: Filter customers updated before this date
+        - search: Search across name, email, and phone number
+        - ordering: Order by field (prefix with - for descending)
+        - page: Page number
+        - page_size: Number of items per page (max 100)
+        
+        Examples:
+        /customers/?name=john&email=gmail
+        /customers/?date_created_after=2023-01-01&date_created_before=2023-12-31
+        /customers/?search=john&ordering=-date_created&page=2&page_size=50
+        """
         return super().list(request, *args, **kwargs)
+
+    @transaction.atomic
+    @with_telemetry(span_name="create_customer")
+    def create(self, request, *args, current_span=None, **kwargs):
+        try:
+            # Log sensitive data carefully - avoid logging passwords, tokens, etc.
+            safe_data = {k: v for k, v in request.data.items() 
+                if k not in ['password', 'token', 'secret', 'key', 'access', 'refresh']}
+
+            # Log request start
+            loggeru.info(
+                "Creating customer",
+                user_id=str(request.user.id),
+                user_email=request.user.email,
+                data_keys=list(safe_data.keys())
+            )
+
+            serializer = self.get_serializer(data=request.data)
+            serializer.is_valid(raise_exception=True)
+            self.perform_create(serializer)
+
+            # Set success attributes using the current span
+            if current_span:
+                current_span.set_attributes({
+                    "customer.id": str(serializer.instance.customer_id),
+                    "operation.success": True
+                })
+                
+            # Log success
+            loggeru.info(
+                "Customer created successfully",
+                customer_id=str(serializer.instance.customer_id),
+                user_id=str(request.user.id)
+            )
+
+
+            headers = self.get_success_headers(serializer.data)
+            return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
+        except Exception as e:
+            # Handle unexpected exceptions
+            ErrorHandler.log_and_raise(
+                message=f"Unexpected error creating customer: {str(e)}",
+                exception_class=LogicException,
+                error_code="UNEXPECTED_ERROR",
+                status_code=500,
+                log_level="critical",
+                extra_data={
+                    "exception_type": type(e).__name__,
+                    "user_id": str(request.user.id)
+                }
+            )
+    
+    @transaction.atomic
+    @with_telemetry(span_name="update_customer")
+    def update(self, request, *args, current_span=None, **kwargs):
+        try:
+            # Log sensitive data carefully - avoid logging passwords, tokens, etc.
+            safe_data = {k: v for k, v in request.data.items() 
+                           if k not in ['password', 'token', 'secret', 'key', 'access', 'refresh']}
+
+            # Log request start
+            loggeru.info(
+                "update customer",
+                user_id=str(request.user.id),
+                user_email=request.user.email,
+                data_keys=list(safe_data.keys())
+            )
+            partial = kwargs.pop("partial", False)
+            instance = self.get_object()
+            serializer = self.get_serializer(instance, data=request.data, partial=partial)
+            serializer.is_valid(raise_exception=True)
+            self.perform_update(serializer)
+
+                # Set success attributes using the current span
+            if current_span:
+                current_span.set_attributes({
+                    "customer.id": str(serializer.instance.customer_id),
+                    "operation.success": True
+                })
+                
+            # Log success
+            loggeru.info(
+                "Customer update successfully",
+                customer_id=str(serializer.instance.customer_id),
+                user_id=str(request.user.id)
+            )
+            return Response(serializer.data)
+        except Exception as e:
+            # Handle unexpected exceptions
+            ErrorHandler.log_and_raise(
+                message=f"Unexpected error update customer: {str(e)}",
+                exception_class=LogicException,
+                error_code="UNEXPECTED_ERROR",
+                status_code=500,
+                log_level="critical",
+                extra_data={
+                    "exception_type": type(e).__name__,
+                    "user_id": str(request.user.id)
+                }
+            )
+
+
+
 
 
 class ChatViewSet(viewsets.GenericViewSet):

@@ -13,6 +13,8 @@ services:
       POSTGRES_PASSWORD: sanusi_password
     ports:
       - "5432:5432"
+    networks: 
+      - telemetry-net
 
   pgadmin:
     image: dpage/pgadmin4
@@ -25,6 +27,24 @@ services:
       PGADMIN_DEFAULT_PASSWORD: admin123
     ports:
       - "5050:80"
+    networks:  
+      - telemetry-net
+
+  jaeger:
+    image: jaegertracing/all-in-one:latest
+    ports:
+      - "16686:16686"  # Jaeger UI
+      - "14268:14268"  # HTTP collector
+      - "6831:6831/udp" # UDP agent (your config uses this)
+    environment:
+      - COLLECTOR_ZIPKIN_HOST_PORT=:9411
+    networks:
+      - telemetry-net
+
+networks:
+  telemetry-net:
+    driver: bridge
+
 
 volumes:
   postgres_data:

@@ -3,6 +3,7 @@ import uuid
 from django.db import models
 from django.core.validators import MinValueValidator
 from django.utils import timezone
+from sanusi_backend.classes.base_model import BaseModel
 
 
 class BusinessTypeChoices(models.TextChoices):
@@ -12,7 +13,7 @@ class BusinessTypeChoices(models.TextChoices):
     SAAS = 'saas'
 
 
-class Business(models.Model):
+class Business(BaseModel):
     # Unique identifier for the business
     company_id = models.UUIDField(
         default=uuid.uuid4, unique=True, db_index=True, primary_key=True
@@ -66,10 +67,10 @@ class Business(models.Model):
         return self.name
 
 
-class Subscription(models.Model):
+class Subscription(BaseModel):
     # Unique identifier for the subscription
-    subscription_id = models.CharField(
-        max_length=256, unique=True, db_index=True, primary_key=True
+    subscription_id = models.UUIDField(
+        default=uuid.uuid4, unique=True, db_index=True, primary_key=True
     )
 
     # Reference to the associated business
@@ -100,55 +101,106 @@ class Subscription(models.Model):
 
 
 
-# class EscalationDepartment(models.Model):
-#     name = models.CharField(max_length=50)
-#     business = models.ForeignKey(
-#         Business, on_delete=models.CASCADE, related_name="escalation_departments",
-#     )
+class EscalationDepartment(BaseModel):
+    id = models.UUIDField(
+        default=uuid.uuid4, unique=True, db_index=True, primary_key=True
+    )
+    name = models.CharField(max_length=50)
+    business = models.ForeignKey(
+        Business, on_delete=models.CASCADE, related_name="escalation_departments",
+    )
 
 
-# class KnowledgeBase(models.Model):
-#     business = models.ForeignKey(
-#         Business, on_delete=models.CASCADE, related_name="business_kb", db_index=True
-#     )
-#     knowledgebase_id = models.CharField(
-#         max_length=72, blank=True, null=True, unique=True
-#     )
-#     title = models.CharField(max_length=125)
-#     content = models.CharField(max_length=512)
-#     cleaned_data = models.JSONField(default=dict)
-#     is_company_description = models.BooleanField(default=False)
+class KnowledgeBase(BaseModel):
+    business = models.ForeignKey(
+        Business, on_delete=models.CASCADE, related_name="business_kb", db_index=True
+    )
+    knowledgebase_id = models.UUIDField(
+        default=uuid.uuid4, unique=True, db_index=True, primary_key=True
+    )
+    title = models.CharField(max_length=125)
+    content = models.CharField(max_length=512)
+    cleaned_data = models.JSONField(default=dict)
+    is_company_description = models.BooleanField(default=False)
 
 
-# class Reply(models.Model):
-#     reply = models.TextField()
-#     to_be_escalated = models.BooleanField()
-#     sentiment = models.CharField(max_length=20)
+class Reply(BaseModel):
+    id = models.UUIDField(
+        default=uuid.uuid4, unique=True, db_index=True, primary_key=True
+    )
+    reply = models.TextField()
+    to_be_escalated = models.BooleanField()
+    sentiment = models.CharField(max_length=20)
 
 
-# class Category(models.Model):
-#     name = models.CharField(max_length=100)
+class Category(BaseModel):
+    id = models.UUIDField(
+        default=uuid.uuid4, unique=True, db_index=True, primary_key=True
+    )
+    name = models.CharField(max_length=100)
+    business = models.ForeignKey(
+        Business, on_delete=models.CASCADE, related_name="category", db_index=True
+    )
 
-#     def __str__(self):
-#         return self.name
-
-
-# class Product(models.Model):
-#     category = models.ForeignKey(Category, on_delete=models.CASCADE)
-#     name = models.CharField(max_length=200)
-#     description = models.TextField(blank=True)
-#     price = models.DecimalField(max_digits=10, decimal_places=2)
-#     stock_quantity = models.PositiveIntegerField()
-#     image = models.ImageField(upload_to="product_images/", blank=True, null=True)
-
-#     def __str__(self):
-#         return self.name
+    def __str__(self):
+        return self.name
 
 
-# class Inventory(models.Model):
-#     product = models.ForeignKey(Product, on_delete=models.CASCADE)
-#     quantity = models.PositiveIntegerField()
-#     timestamp = models.DateTimeField(auto_now_add=True)
+class Product(BaseModel):
+    id = models.UUIDField(
+        default=uuid.uuid4, unique=True, db_index=True, primary_key=True
+    )
+    category = models.ForeignKey(Category, on_delete=models.CASCADE)
+    name = models.CharField(max_length=200)
+    sku = models.CharField(max_length=200, unique=True)
+    description = models.TextField(blank=True)
+    price = models.DecimalField(max_digits=10, decimal_places=2)
+    stock_quantity = models.PositiveIntegerField()
+    image = models.URLField(blank=True, null=True)
+    business = models.ForeignKey(
+        Business, on_delete=models.CASCADE, related_name="product", db_index=True
+    )
+    bundle = models.JSONField(default=dict)
 
-#     def __str__(self):
-#         return f"{self.product.name} - {self.quantity}"
+    def __str__(self):
+        return self.name
+    
+    def add_to_bundle(self, item, quantity=1):
+        """Add an item to the bundle"""
+        if isinstance(self.bundle, dict):
+            self.bundle[item] = self.bundle.get(item, 0) + quantity
+        elif isinstance(self.bundle, list):
+            self.bundle.append(item)
+        self.save(update_fields=['bundle'])
+    
+    def remove_from_bundle(self, item):
+        """Remove an item from the bundle"""
+        if isinstance(self.bundle, dict) and item in self.bundle:
+            del self.bundle[item]
+        elif isinstance(self.bundle, list) and item in self.bundle:
+            self.bundle.remove(item)
+        self.save(update_fields=['bundle'])
+    
+    def get_bundle_items(self):
+        """Get all items in the bundle"""
+        if isinstance(self.bundle, dict):
+            return list(self.bundle.keys())
+        return self.bundle or []
+    
+    def has_item_in_bundle(self, item):
+        """Check if an item is in the bundle"""
+        if isinstance(self.bundle, dict):
+            return item in self.bundle
+        return item in (self.bundle or [])
+
+
+class Inventory(BaseModel):
+    id = models.UUIDField(
+        default=uuid.uuid4, unique=True, db_index=True, primary_key=True
+    )
+    product = models.ForeignKey(Product, on_delete=models.CASCADE)
+    quantity = models.PositiveIntegerField()
+    timestamp = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.product.name} - {self.quantity}"

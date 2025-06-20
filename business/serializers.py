@@ -1,9 +1,11 @@
 import json
 from rest_framework import serializers
 from django.shortcuts import get_object_or_404
-from .models import Business
-from business.private.models import KnowledgeBase, EscalationDepartment
+from .models import Business, KnowledgeBase, EscalationDepartment, Product, Category
+# from business.private.models import KnowledgeBase, EscalationDepartment
 from sanusi.views import generate_response_chat
+from sanusi_backend.utils.error_handler import ErrorHandler
+from decimal import Decimal, ROUND_HALF_UP
 
 
 class KnowledgeBaseSerializer(serializers.ModelSerializer):
@@ -109,16 +111,32 @@ class BusinessSerializer(serializers.ModelSerializer):
         """
         Validate the serializer data before creating the Business instance.
         """
-        if (
-            "company_id" in data
-            and Business.objects.filter(company_id=data["company_id"]).exists()
-        ):
-            raise serializers.ValidationError("Company ID already exists")
+        # Check if company_id is provided
+        company_id = data.get("company_id")
+        # Check if company_id already exists
+        if Business.objects.filter(company_id=company_id).exists():
+            ErrorHandler.validation_error(
+                    message="Company ID already exists",
+                    field="company_id", 
+                    error_code="INVALID_COMPANY_ID",
+                    extra_data={"provided_id": data["company_id"]}
+                )
         return data
 
     def create(self, validated_data):
+        request = self.context.get("request")
+        user = request.user
         escalation_departments_data = validated_data.pop("escalation_departments")
         business = Business.objects.create(**validated_data)
+
+        # Check if this will be the user's first business
+        is_first_business = not user.businesses.exists()
+
+        user.businesses.add(business)
+
+        # Set as default only if it's the first business
+        if is_first_business:
+            user.set_default_business(business)
 
         for department_data in escalation_departments_data:
             EscalationDepartment.objects.create(business=business, **department_data)
@@ -152,3 +170,93 @@ class SanusiBusinessCreateSerializer(serializers.Serializer):
     knowledge_base = serializers.ListField(required=False, allow_null=True)
     instructions = serializers.CharField(required=False, allow_null=True)
     escalation_departments = serializers.ListField(required=False, allow_null=True)
+
+
+class InventorySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Product
+        fields = ["id", "name", "business", "category", "description", "price", "stock_quantity", "image", "bundle"]
+        read_only_fields = ["id","business"]  # Prevent user from manually setting it
+
+
+    def create(self, validated_data):
+        request = self.context.get("request")
+        user = request.user
+        default_business = user.get_default_business()
+        bundles_data = validated_data.pop("bundles", None)
+        price_data = validated_data.pop("price", None)
+        if not default_business:
+            ErrorHandler.validation_error(
+                message="User does not have a business.",
+                field="business_id", 
+                error_code="NO_DEFAULT_BUSINESS",
+                extra_data={"user_id": user.id}
+            )
+
+        if not price_data:
+            ErrorHandler.validation_error(
+                message="User does not have price.",
+                field="price", 
+                error_code="NO_DEFAULT_PRODUCT_PRICE",
+                extra_data={"user_id": user.id}
+            )
+
+         # Convert price to decimal with 2 decimal places
+        try:
+            # Ensure we're working with numeric type
+            price_value = Decimal(str(price_data))
+            # Round to 2 decimal places using standard rounding
+            price_value = price_value.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+        except (TypeError, ValueError) as e:
+            ErrorHandler.validation_error(
+                message=f"Invalid price format: {str(e)}",
+                field="price", 
+                error_code="INVALID_PRICE_FORMAT",
+                extra_data={"price_data": price_data}
+            )
+      
+        product = Product(**validated_data)
+        product.business = default_business
+        product.price = price_value
+        product.save()
+        if bundles_data is not None:
+            product.add_to_bundle(bundles_data)
+        return product
+
+
+    def update(self, validated_data):
+        request = self.context.get("request")
+        user = request.user
+        bundles_data = validated_data.pop("bundles", None)
+        product = Product(**validated_data)
+        product.save()
+        if bundles_data is not None:
+            product.add_to_bundle(bundles_data)
+        return product
+    
+
+class CategorySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Category
+        fields = ["id", "name", "business"]
+        read_only_fields = ["id","business"]  # Prevent user from manually setting it
+    
+    def create(self, validated_data):
+        request = self.context.get("request")
+        user = request.user
+        default_business = user.get_default_business()
+        if not default_business:
+            ErrorHandler.validation_error(
+                message="User does not have a business.",
+                field="business_id", 
+                error_code="NO_DEFAULT_BUSINESS",
+                extra_data={"user_id": user.id}
+            )
+      
+        category = Category(**validated_data)
+        category.business = default_business
+        category.save()
+        
+        return category
+
+        
