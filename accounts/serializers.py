@@ -24,6 +24,8 @@ def validate_user_password_attribute_similarity(password, user):
 
 class RegisterSerializer(serializers.Serializer):
     email = serializers.EmailField(required=True)
+    first_name  = serializers.CharField(required=True, min_length=3)
+    last_name  = serializers.CharField(required=True, min_length=3)
     password = serializers.CharField(
         write_only=True,
         min_length=8,
@@ -67,8 +69,10 @@ class RegisterSerializer(serializers.Serializer):
     def save(self):
         email = self.validated_data["email"]
         password = self.validated_data["password"]
+        first_name  = self.validated_data["first_name"]
+        last_name  = self.validated_data["last_name"]
 
-        user = User(email=email)
+        user = User(email=email, first_name=first_name, last_name=last_name)
         user.set_password(password)
         validate_user_password_attribute_similarity(password, user)
         user.save()
@@ -90,6 +94,7 @@ class UserSerializer(serializers.ModelSerializer):
             "date_joined",
             "is_active",
             "businesses",
+            "settings",
         ]
 
         read_only_fields = [

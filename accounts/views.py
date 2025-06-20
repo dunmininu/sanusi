@@ -88,6 +88,11 @@ class AuthenticationViewSet(viewsets.GenericViewSet):
                                 'first_name': openapi.Schema(type=openapi.TYPE_STRING),
                                 'last_name': openapi.Schema(type=openapi.TYPE_STRING),
                                 'businesses':openapi.Schema(type=openapi.TYPE_STRING),
+                                'settings': openapi.Schema(type=openapi.TYPE_OBJECT, 
+                                    properties={
+                                        'default_business': openapi.Schema(type=openapi.TYPE_STRING),
+                                    }
+                                )
                             }
                         )
                     }

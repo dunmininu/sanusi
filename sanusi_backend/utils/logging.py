@@ -1,5 +1,6 @@
 
 import sys
+from django.conf import settings
 from loguru import logger
 from opentelemetry import trace
 from opentelemetry.exporter.jaeger.thrift import JaegerExporter
@@ -7,7 +8,7 @@ from opentelemetry.instrumentation.django import DjangoInstrumentor
 from opentelemetry.instrumentation.psycopg2 import Psycopg2Instrumentor
 from opentelemetry.instrumentation.requests import RequestsInstrumentor
 from opentelemetry.sdk.trace import TracerProvider
-from opentelemetry.sdk.trace.export import BatchSpanProcessor
+from opentelemetry.sdk.trace.export import BatchSpanProcessor, ConsoleSpanExporter, SimpleSpanProcessor
 from opentelemetry.sdk.resources import Resource, SERVICE_NAME
 
 
@@ -48,25 +49,53 @@ def setup_logging():
 
 def setup_telemetry():
     """Configure OpenTelemetry"""
-    # Set up the tracer provider
-    resource = Resource.create({SERVICE_NAME: "sanusi-api"})
-    trace.set_tracer_provider(TracerProvider(resource=resource))
-    
-    # Configure Jaeger exporter
-    jaeger_exporter = JaegerExporter(
-        agent_host_name="localhost",
-        agent_port=6831,
-    )
-    
-    # Add span processor
-    span_processor = BatchSpanProcessor(jaeger_exporter)
-    trace.get_tracer_provider().add_span_processor(span_processor)
-    
-    # Auto-instrument Django
-    DjangoInstrumentor().instrument()
-    
-    # Auto-instrument database calls
-    Psycopg2Instrumentor().instrument()
-    
-    # Auto-instrument HTTP requests
-    RequestsInstrumentor().instrument()
+    try:
+        # Set up the tracer provider
+        resource = Resource.create({SERVICE_NAME: "sanusi-api"})
+        tracer_provider = TracerProvider(resource=resource)
+        trace.set_tracer_provider(tracer_provider)
+        print("✅ Tracer provider set up")
+        
+        # Configure Jaeger exporter
+        # jaeger_exporter = JaegerExporter(
+        #     agent_host_name="localhost",
+        #     agent_port=6831,
+        #     # Add timeout to prevent hangs
+        #     timeout=5000,  # 5 seconds
+        # )
+        jaeger_exporter = JaegerExporter(
+            collector_endpoint="http://localhost:14268/api/traces",
+            timeout=5000,  # 5 seconds
+        )
+        print("✅ Jaeger exporter configured")
+        
+        # Add batch processor with debug options
+        span_processor = BatchSpanProcessor(
+            jaeger_exporter,
+            max_queue_size=1000,
+            schedule_delay_millis=5000,
+        )
+        trace.get_tracer_provider().add_span_processor(span_processor)
+        print("✅ Batch span processor added")
+
+         # Add console exporter for local debugging
+        if settings.DEBUG:  # Only in development
+            console_processor = SimpleSpanProcessor(ConsoleSpanExporter())
+            tracer_provider.add_span_processor(console_processor)
+            print("✅ Console exporter added for debugging")
+        
+        # Auto-instrument Django
+        DjangoInstrumentor().instrument()
+        
+        # Auto-instrument database calls
+        Psycopg2Instrumentor().instrument()
+        
+        # Auto-instrument HTTP requests
+        RequestsInstrumentor().instrument()
+        print("✅ All instrumentations complete")
+        
+        print("🚀 Telemetry setup complete!")
+    except Exception as e:
+        print(f"🔥 Telemetry setup failed: {str(e)}")
+        import traceback
+        traceback.print_exc()
