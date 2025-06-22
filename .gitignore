@@ -142,3 +142,5 @@ frontend/.DS_Store
 .ruff_cache/
 
 logs/
+__pycache__/
+**/__pycache__/

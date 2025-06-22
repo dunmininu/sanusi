@@ -1,4 +1,5 @@
 
+import os
 import sys
 from django.conf import settings
 from loguru import logger
@@ -80,11 +81,11 @@ def setup_telemetry():
             console_processor = SimpleSpanProcessor(ConsoleSpanExporter())
             tracer_provider.add_span_processor(console_processor)
         
-        # Auto-instrument Django
-        DjangoInstrumentor().instrument()
+#         # Auto-instrument Django
+#         DjangoInstrumentor().instrument()
         
-        # Auto-instrument database calls
-        Psycopg2Instrumentor().instrument()
+#         # Auto-instrument database calls
+#         Psycopg2Instrumentor().instrument()
         
         # Auto-instrument HTTP requests
         RequestsInstrumentor().instrument()
