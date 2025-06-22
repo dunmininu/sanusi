@@ -112,14 +112,12 @@ def setup_telemetry() -> None:
     tracer_provider = TracerProvider(resource=resource)
     trace.set_tracer_provider(tracer_provider)
 
-    # --- Console exporter is always nice in dev ---------------------------
     if settings.DEBUG:
         tracer_provider.add_span_processor(
             SimpleSpanProcessor(ConsoleSpanExporter())
         )
         logger.debug("Console span exporter attached")
 
-    # --- Optional Jaeger exporter -----------------------------------------
     if os.getenv("JAEGER_ENABLED", "false").lower() in {"true", "1"}:
         je = JaegerExporter(
             collector_endpoint=os.getenv(
@@ -135,7 +133,6 @@ def setup_telemetry() -> None:
     else:
         logger.debug("Jaeger exporter NOT enabled")
 
-    # ----------------------------------------------------------------------
     DjangoInstrumentor().instrument()
     Psycopg2Instrumentor().instrument()
     RequestsInstrumentor().instrument()
