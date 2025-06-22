@@ -139,3 +139,5 @@ erl_crash.dump
 frontend/.DS_Store
 
 logs/
+__pycache__/
+**/__pycache__/
