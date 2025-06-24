@@ -54,7 +54,6 @@ def setup_telemetry():
         resource = Resource.create({SERVICE_NAME: "sanusi-api"})
         tracer_provider = TracerProvider(resource=resource)
         trace.set_tracer_provider(tracer_provider)
-        print("✅ Tracer provider set up")
         
         # Configure Jaeger exporter
         # jaeger_exporter = JaegerExporter(
@@ -67,7 +66,6 @@ def setup_telemetry():
             collector_endpoint="http://localhost:14268/api/traces",
             timeout=5000,  # 5 seconds
         )
-        print("✅ Jaeger exporter configured")
         
         # Add batch processor with debug options
         span_processor = BatchSpanProcessor(
@@ -76,13 +74,11 @@ def setup_telemetry():
             schedule_delay_millis=5000,
         )
         trace.get_tracer_provider().add_span_processor(span_processor)
-        print("✅ Batch span processor added")
 
          # Add console exporter for local debugging
         if settings.DEBUG:  # Only in development
             console_processor = SimpleSpanProcessor(ConsoleSpanExporter())
             tracer_provider.add_span_processor(console_processor)
-            print("✅ Console exporter added for debugging")
         
         # Auto-instrument Django
         DjangoInstrumentor().instrument()
@@ -92,10 +88,8 @@ def setup_telemetry():
         
         # Auto-instrument HTTP requests
         RequestsInstrumentor().instrument()
-        print("✅ All instrumentations complete")
         
-        print("🚀 Telemetry setup complete!")
     except Exception as e:
-        print(f"🔥 Telemetry setup failed: {str(e)}")
+        print(f"Telemetry setup failed: {str(e)}")
         import traceback
         traceback.print_exc()

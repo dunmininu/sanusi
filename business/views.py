@@ -418,9 +418,16 @@ class InventoryViewSet(
     lookup_field = "id"
     permission_classes = [IsAuthenticated] 
 
+    
     def get_object(self):
-        return get_object_or_404(Product, id=self.kwargs.get("id"))
-   
+        # Get company_id from URL and filter products by it
+        company_id = self.kwargs.get("company_id")
+        return get_object_or_404(
+            Product, 
+            id=self.kwargs.get("id"),
+            business_id=company_id  # Ensure product belongs to company
+        )
+    
     filter_backends = [
         django_filters.rest_framework.DjangoFilterBackend,
         filters.SearchFilter,
@@ -431,35 +438,28 @@ class InventoryViewSet(
     ordering_fields = ['date_created', 'last_updated', 'name', 'category_name', 'sku']
     ordering = ['-date_created']  # Default ordering
     pagination_class = CustomPagination
-    queryset = Product.objects.all()
 
     def get_queryset(self):
         queryset = super().get_queryset()
         company_id = self.kwargs.get("company_id")
-        if company_id:
-            queryset = queryset.filter(business_id=company_id)
-        return queryset
+        # Always filter by company_id when available
+        return queryset.filter(business_id=company_id)
     
     def list(self, request, *args, **kwargs):
         """
-        List customers with filtering and pagination
+        List products with filtering and pagination
         
         Query Parameters:
         - name: Filter by name (case-insensitive partial match)
         - email: Filter by email (case-insensitive partial match)
-        - date_created_after: Filter customers created after this date (YYYY-MM-DD or YYYY-MM-DD HH:MM:SS)
-        - date_created_before: Filter customers created before this date
-        - last_updated_after: Filter customers updated after this date
-        - last_updated_before: Filter customers updated before this date
+        - date_created_after: Filter products created after this date (YYYY-MM-DD or YYYY-MM-DD HH:MM:SS)
+        - date_created_before: Filter products created before this date
+        - last_updated_after: Filter products updated after this date
+        - last_updated_before: Filter products updated before this date
         - search: Search across name, email, and phone number
         - ordering: Order by field (prefix with - for descending)
         - page: Page number
         - page_size: Number of items per page (max 100)
-        
-        Examples:
-        /customers/?name=john&email=gmail
-        /customers/?date_created_after=2023-01-01&date_created_before=2023-12-31
-        /customers/?search=john&ordering=-date_created&page=2&page_size=50
         """
         return super().list(request, *args, **kwargs)
     
@@ -580,8 +580,15 @@ class CategoryViewSet(
     lookup_field = "id"
     permission_classes = [IsAuthenticated] 
 
+
     def get_object(self):
-        return get_object_or_404(Product, id=self.kwargs.get("id"))
+        # Get company_id from URL and filter cat by it
+        company_id = self.kwargs.get("company_id")
+        return get_object_or_404(
+            Category, 
+            id=self.kwargs.get("id"),
+            business_id=company_id  # Ensure cat belongs to company
+        )
    
     filter_backends = [
         django_filters.rest_framework.DjangoFilterBackend,
@@ -594,24 +601,30 @@ class CategoryViewSet(
     ordering = ['-date_created']  # Default ordering
     pagination_class = CustomPagination
 
+    # def get_queryset(self):
+    #     queryset = super().get_queryset()
+    #     company_id = self.kwargs.get("id")
+    #     if company_id:
+    #         queryset = queryset.filter(id=id)
+    #     return queryset
+    
     def get_queryset(self):
         queryset = super().get_queryset()
-        company_id = self.kwargs.get("id")
-        if company_id:
-            queryset = queryset.filter(id=id)
-        return queryset
+        company_id = self.kwargs.get("company_id")
+        # Always filter by company_id when available
+        return queryset.filter(business_id=company_id)
     
 
     def list(self, request, *args, **kwargs):
         """
-        List customers with filtering and pagination
+        List category with filtering and pagination
         
         Query Parameters:
         - name: Filter by name (case-insensitive partial match)
-        - date_created_after: Filter customers created after this date (YYYY-MM-DD or YYYY-MM-DD HH:MM:SS)
-        - date_created_before: Filter customers created before this date
-        - last_updated_after: Filter customers updated after this date
-        - last_updated_before: Filter customers updated before this date
+        - date_created_after: Filter categories created after this date (YYYY-MM-DD or YYYY-MM-DD HH:MM:SS)
+        - date_created_before: Filter categories created before this date
+        - last_updated_after: Filter categories updated after this date
+        - last_updated_before: Filter categories updated before this date
         - search: Search across name
         - ordering: Order by field (prefix with - for descending)
         - page: Page number

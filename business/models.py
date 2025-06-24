@@ -150,7 +150,7 @@ class Product(BaseModel):
     id = models.UUIDField(
         default=uuid.uuid4, unique=True, db_index=True, primary_key=True
     )
-    category = models.ForeignKey(Category, on_delete=models.CASCADE)
+    category = models.ForeignKey(Category, on_delete=models.CASCADE, related_name='products', db_index=True)
     name = models.CharField(max_length=200)
     sku = models.CharField(max_length=200, unique=True)
     description = models.TextField(blank=True)
