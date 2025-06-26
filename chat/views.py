@@ -256,7 +256,7 @@ class CustomerViewSet(
 class ChatViewSet(viewsets.GenericViewSet):
     serializer_class = ChatSerializer
     queryset = Chat.objects.all()
-    filter_backend = filters.SearchFilter
+    filter_backends = [filters.SearchFilter]
     search_fields = ["channel", "read", "customer__name", "status"]
 
     @transaction.atomic
@@ -456,7 +456,7 @@ class ChatViewSet(viewsets.GenericViewSet):
     @action(
         detail=False,
         methods=["post"],
-        url_path="(?P<business_id>[^/]+)/(?P<chat_identifier>[^/.]+)/toggle-chat-status",
+        url_path="(?P<business_id>[^/]+)/(?P<chat_identifier>[^/.]+)/toggle-sanusi",
     )
     def toggle_sanusi(self, request, business_id, chat_identifier):
         try:
