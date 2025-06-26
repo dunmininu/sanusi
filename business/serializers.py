@@ -5,7 +5,7 @@ from .models import Business, KnowledgeBase, EscalationDepartment, Product, Cate
 # from business.private.models import KnowledgeBase, EscalationDepartment
 from sanusi.views import generate_response_chat
 from sanusi_backend.utils.error_handler import ErrorHandler
-from decimal import Decimal, ROUND_HALF_UP
+from decimal import Decimal, ROUND_HALF_UP, InvalidOperation
 
 
 class KnowledgeBaseSerializer(serializers.ModelSerializer):
@@ -207,7 +207,7 @@ class InventorySerializer(serializers.ModelSerializer):
             price_value = Decimal(str(price_data))
             # Round to 2 decimal places using standard rounding
             price_value = price_value.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
-        except (TypeError, ValueError) as e:
+        except (TypeError, ValueError, InvalidOperation) as e:
             ErrorHandler.validation_error(
                 message=f"Invalid price format: {str(e)}",
                 field="price", 
@@ -224,15 +224,36 @@ class InventorySerializer(serializers.ModelSerializer):
         return product
 
 
-    def update(self, validated_data):
+    def update(self, instance, validated_data):
         request = self.context.get("request")
         user = request.user
         bundles_data = validated_data.pop("bundles", None)
-        product = Product(**validated_data)
-        product.save()
+        price_data = validated_data.get("price")
+        
+        # Handle price conversion if provided
+        if price_data is not None:
+            try:
+                price_value = Decimal(str(price_data))
+                price_value = price_value.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+                validated_data["price"] = price_value
+            except (TypeError, ValueError, InvalidOperation) as e:
+                ErrorHandler.validation_error(
+                    message=f"Invalid price format: {str(e)}",
+                    field="price", 
+                    error_code="INVALID_PRICE_FORMAT",
+                    extra_data={"price_data": price_data}
+                )
+        
+        # Update instance fields
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+        
+        instance.save()
+        
         if bundles_data is not None:
-            product.add_to_bundle(bundles_data)
-        return product
+            instance.add_to_bundle(bundles_data)
+        
+        return instance
     
 
 class CategorySerializer(serializers.ModelSerializer):

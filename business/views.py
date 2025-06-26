@@ -536,9 +536,15 @@ class InventoryViewSet(
                 data_keys=list(safe_data.keys())
             )
 
-            serializer = self.get_serializer(data=request.data)
+            # Get the instance to update
+            instance = self.get_object()
+            serializer = self.get_serializer(instance, data=request.data, partial=True)
+            
+            # Validate the serializer
             serializer.is_valid(raise_exception=True)
-            self.perform_create(serializer)
+            
+            # Save the updated instance
+            self.perform_update(serializer)
             # Set success attributes using the current span
             if current_span:
                 current_span.set_attributes({

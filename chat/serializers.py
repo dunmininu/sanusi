@@ -12,8 +12,8 @@ class CreateChatRequestSerializer(serializers.Serializer):
 class CustomerSerializer(serializers.ModelSerializer):
     class Meta:
         model = Customer
-        fields = ["customer_id", "name", "email", "phone_number", "platform", "identifier"]
-        read_only_fields = ["customer_id","identifier"]  # Prevent user from manually setting it
+        fields = ["customer_id", "name", "email", "phone_number", "platform", "identifier", "business", "date_created"]
+        read_only_fields = ["customer_id","identifier", "business", "date_created"]  # Prevent user from manually setting it
     
     def create(self, validated_data):
         request = self.context.get("request")
