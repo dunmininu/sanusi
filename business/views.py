@@ -21,7 +21,7 @@ import django_filters
 from sanusi_backend.decorators.telemetry import with_telemetry
 from sanusi_backend.utils.error_handler import ErrorHandler, LogicException
 
-from .models import Business, Product, Category
+from .models import Business, Product, Category, Order
 from business.private.models import KnowledgeBase, EscalationDepartment
 from .serializers import (
     BulkCreateKnowledgeBaseSerializer,
@@ -31,7 +31,8 @@ from .serializers import (
     KnowledgeBaseSerializer,
     SanusiBusinessCreateSerializer,
     InventorySerializer,
-    CategorySerializer
+    CategorySerializer,
+    OrderSerializer
 )
 from sanusi_backend.classes.custom import  CustomPagination, BaseSearchFilter
 
@@ -747,4 +748,183 @@ class CategoryViewSet(
             )
 
     
+# For Order model
+class OrderFilter(BaseSearchFilter):
+    class Meta(BaseSearchFilter.Meta):
+        model = Order
+        fields = BaseSearchFilter.Meta.fields + ['order_id', 'status', 'platform']
+
+# Add custom relation filters
+OrderFilter.add_relation_filter('order_id', 'order_id')
+OrderFilter.add_relation_filter('status', 'status')
+OrderFilter.add_relation_filter('platform', 'platform')
+
+
+class OrderViewSet(
+    mixins.ListModelMixin, mixins.DestroyModelMixin, viewsets.GenericViewSet, 
+    mixins.CreateModelMixin, mixins.UpdateModelMixin, mixins.RetrieveModelMixin,
+):
+    queryset = Order.objects.select_related('customer').prefetch_related(
+        'order_products__product', 'order_products__product__category'
+    )
+    serializer_class = OrderSerializer
+    lookup_field = "id"
+    permission_classes = [IsAuthenticated] 
+
+    def get_object(self):
+        # Get company_id from URL and filter orders by it
+        company_id = self.kwargs.get("company_id")
+        return get_object_or_404(
+            Order.objects.select_related('customer').prefetch_related(
+                'order_products__product', 'order_products__product__category'
+            ), 
+            id=self.kwargs.get("id"),
+            business_id=company_id  # Ensure order belongs to company
+        )
     
+    filter_backends = [
+        django_filters.rest_framework.DjangoFilterBackend,
+        filters.SearchFilter,
+        filters.OrderingFilter
+    ]
+    filterset_class = OrderFilter
+    search_fields = ['order_id', 'customer__name', 'customer__email', 'status']
+    ordering_fields = ['date_created', 'last_updated', 'order_id', 'status', 'delivery_date']
+    ordering = ['-date_created']  # Default ordering
+    pagination_class = CustomPagination
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        company_id = self.kwargs.get("company_id")
+        # Always filter by company_id when available
+        return queryset.filter(business_id=company_id)
+    
+    def list(self, request, *args, **kwargs):
+        """
+        List orders with filtering and pagination
+        
+        Query Parameters:
+        - order_id: Filter by order ID (exact match)
+        - status: Filter by status
+        - platform: Filter by platform
+        - date_created_after: Filter orders created after this date (YYYY-MM-DD or YYYY-MM-DD HH:MM:SS)
+        - date_created_before: Filter orders created before this date
+        - last_updated_after: Filter orders updated after this date
+        - last_updated_before: Filter orders updated before this date
+        - search: Search across order_id, customer name, customer email, and status
+        - ordering: Order by field (prefix with - for descending)
+        - page: Page number
+        - page_size: Number of items per page (max 100)
+        """
+        return super().list(request, *args, **kwargs)
+    
+    @transaction.atomic
+    @with_telemetry(span_name="create_order")
+    def create(self, request, *args, current_span=None, **kwargs):
+        try:
+            # Log sensitive data carefully - avoid logging passwords, tokens, etc.
+            safe_data = {k: v for k, v in request.data.items() 
+                        if k not in ['password', 'token', 'secret', 'key', 'access', 'refresh']}
+
+            # Log request start
+            logger.info(
+                "Creating order",
+                user_id=str(request.user.id),
+                user_email=request.user.email,
+                data_keys=list(safe_data.keys())
+            )
+
+            serializer = self.get_serializer(data=request.data)
+            serializer.is_valid(raise_exception=True)
+            self.perform_create(serializer)
+
+            # Set success attributes using the current span
+            if current_span:
+                current_span.set_attributes({
+                    "order.id": str(serializer.instance.id),
+                    "order.order_id": serializer.instance.order_id,
+                    "operation.success": True
+                })
+                
+            # Log success
+            logger.info(
+                "Order created successfully",
+                order_id=str(serializer.instance.id),
+                order_number=serializer.instance.order_id,
+                user_id=str(request.user.id)
+            )
+
+            headers = self.get_success_headers(serializer.data)
+            return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
+        
+        except Exception as e:
+            # Handle unexpected exceptions
+            ErrorHandler.log_and_raise(
+                message=f"Unexpected error creating order: {str(e)}",
+                exception_class=LogicException,
+                error_code="UNEXPECTED_ERROR",
+                status_code=500,
+                log_level="critical",
+                extra_data={
+                    "exception_type": type(e).__name__,
+                    "user_id": str(request.user.id)
+                }
+            )
+
+    @transaction.atomic
+    @with_telemetry(span_name="update_order")
+    def update(self, request, *args, current_span=None, **kwargs):
+        try:
+            # Log sensitive data carefully - avoid logging passwords, tokens, etc.
+            safe_data = {k: v for k, v in request.data.items() 
+                        if k not in ['password', 'token', 'secret', 'key', 'access', 'refresh']}
+
+            # Log request start
+            logger.info(
+                "Updating order",
+                user_id=str(request.user.id),
+                user_email=request.user.email,
+                data_keys=list(safe_data.keys())
+            )
+
+            # Get the instance to update
+            instance = self.get_object()
+            serializer = self.get_serializer(instance, data=request.data, partial=True)
+            
+            # Validate the serializer
+            serializer.is_valid(raise_exception=True)
+            
+            # Save the updated instance
+            self.perform_update(serializer)
+            
+            # Set success attributes using the current span
+            if current_span:
+                current_span.set_attributes({
+                    "order.id": str(serializer.instance.id),
+                    "order.order_id": serializer.instance.order_id,
+                    "operation.success": True
+                })
+                
+            # Log success
+            logger.info(
+                "Order updated successfully",
+                order_id=str(serializer.instance.id),
+                order_number=serializer.instance.order_id,
+                user_id=str(request.user.id)
+            )
+
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        
+        except Exception as e:
+            # Handle unexpected exceptions
+            ErrorHandler.log_and_raise(
+                message=f"Unexpected error updating order: {str(e)}",
+                exception_class=LogicException,
+                error_code="UNEXPECTED_ERROR",
+                status_code=500,
+                log_level="critical",
+                extra_data={
+                    "exception_type": type(e).__name__,
+                    "user_id": str(request.user.id)
+                }
+            )

@@ -1,9 +1,11 @@
 import uuid
-
+from datetime import datetime, timedelta
 from django.db import models
 from django.core.validators import MinValueValidator
 from django.utils import timezone
 from sanusi_backend.classes.base_model import BaseModel
+# from chat.models import Customer
+from decimal import Decimal
 
 
 class BusinessTypeChoices(models.TextChoices):
@@ -12,6 +14,14 @@ class BusinessTypeChoices(models.TextChoices):
     MEDICAL = 'medical'
     SAAS = 'saas'
 
+CANCELLED = 'CANCELLED'
+PENDING = 'PENDING'
+PROCESSING = 'PROCESSING'
+SHIPPED = 'SHIPPED' 
+DELIVERED = 'DELIVERED'
+
+def get_delivery_date():
+    return datetime.today() + timedelta(days=2)
 
 class Business(BaseModel):
     # Unique identifier for the business
@@ -204,3 +214,129 @@ class Inventory(BaseModel):
 
     def __str__(self):
         return f"{self.product.name} - {self.quantity}"
+
+
+
+class Order(BaseModel):
+    STATUSES = (
+        (CANCELLED, CANCELLED), (PENDING, PENDING), (PROCESSING, PROCESSING),
+        (SHIPPED, SHIPPED), (DELIVERED, DELIVERED)
+    )
+
+    id = models.UUIDField(
+        default=uuid.uuid4, unique=True, db_index=True, primary_key=True
+    )
+    order_id = models.CharField(max_length=20, unique=True, null=False, blank=True)
+    delivery_info = models.JSONField()
+    payment_summary = models.JSONField()
+    delivery_date = models.DateTimeField(default=get_delivery_date, null=True)
+    status = models.CharField(
+        choices=STATUSES, max_length=60, default=PENDING)
+    customer = models.ForeignKey(
+        'chat.Customer',
+        on_delete=models.CASCADE,
+        related_name="customer_orders",
+    )
+    platform = models.CharField(max_length=256, null=True, blank=True)
+    business = models.ForeignKey(
+        Business, on_delete=models.CASCADE, related_name="order_business", db_index=True
+    )
+
+    def __str__(self):
+        return f"{self.order_id} - {self.status}" 
+
+    def save(self, *args, **kwargs):
+        if not self.order_id:
+            self.order_id = self._generate_order_id_simple()
+        super().save(*args, **kwargs)
+
+    @classmethod 
+    def _generate_order_id_simple(cls):
+        """
+        Simplified version using database row counting.
+        Good balance between performance and simplicity.
+        """
+        # Count existing orders + 1 (handles deletions better than max)
+        next_number = cls.objects.filter(
+            order_id__startswith='ORD-'
+        ).count() + 1
+        
+        # Handle edge case where count might not reflect actual max number
+        while cls.objects.filter(order_id=f"ORD-{next_number:03d}").exists():
+            next_number += 1
+            
+        return f"ORD-{next_number:03d}"
+
+    def product_count(self):
+        return self.order_products.count()
+
+
+    def aggregate(self):
+        """
+        Calculate net_total and total from order products and update payment_summary.
+        Gets VAT from existing payment_summary, calculates net_total from order products,
+        then calculates total (net_total + vat) and updates payment_summary.
+        """
+        
+        # Get existing VAT from payment_summary (default to 0 if not present)
+        vat_amount = Decimal(str(self.payment_summary.get('vat', 0)))
+
+        delivery_fee = Decimal(str(self.payment_summary.get('delivery_fee', 0)))
+        
+        # Calculate net_total from all order products
+        net_total = sum(
+            item.price * item.quantity 
+            for item in self.order_products.all()
+        )
+        
+        # Ensure net_total is Decimal for accurate calculation
+        if not isinstance(net_total, Decimal):
+            net_total = Decimal('0')
+        
+        # Calculate total (net_total + vat)
+        total = net_total + vat_amount + delivery_fee
+        
+        # Update payment_summary with calculated values
+        self.payment_summary.update({
+            'net_total': float(net_total),  # Convert Decimal to float for JSON
+            'total': float(total),
+            'vat': float(vat_amount),  # Ensure vat is also float
+            'delivery_fee': float(delivery_fee)
+        })
+        
+        # Save the updated payment_summary
+        self.save(update_fields=['payment_summary'])
+        
+        return {
+            'net_total': float(net_total),
+            'vat': float(vat_amount),
+            'total': float(total)
+        }
+    
+    class Meta:
+        # ordering = ['-last_updated']  # Orders by newest first
+        indexes = [
+            models.Index(fields=['order_id']),
+            models.Index(fields=['last_updated']),
+        ]
+
+
+    # Your original (slow)
+    # Order.objects.filter(...).order_by('order_id').last()  # O(n log n)
+
+    # Optimized (fast) 
+    #Order.objects.filter(...).aggregate(Max('order_id'))   # O(1)
+
+class OrderProduct(BaseModel):
+    id = models.UUIDField(
+        default=uuid.uuid4, unique=True, db_index=True, primary_key=True
+    )
+    product = models.ForeignKey(Product, on_delete=models.CASCADE)
+    quantity = models.PositiveIntegerField()
+    price = models.DecimalField(max_digits=10, decimal_places=2)
+    order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name='order_products')
+    meta = models.JSONField()
+
+    class Meta:
+        unique_together = ['order', 'product'] # prevent duplicate products in the same order
+
