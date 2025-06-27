@@ -26,6 +26,9 @@ jobs:
       - name: Lint with Ruff
         run: ruff check .
 
+      - name: format with Ruff
+        run: ruff --fix
+
       - name: Trigger Render deploy
         env:
           RENDER_DEPLOY_HOOK_URL: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
