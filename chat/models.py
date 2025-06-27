@@ -29,7 +29,7 @@ class Customer(BaseModel):
         default=uuid.uuid4, unique=True, db_index=True, primary_key=True
     )
     business = models.ForeignKey(
-        Business, on_delete=models.CASCADE, related_name="customer",
+        'business.Business', on_delete=models.CASCADE, related_name="customer",
     )
     name = models.CharField(max_length=256)
     email = models.EmailField(null=True, blank=True)
