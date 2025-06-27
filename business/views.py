@@ -755,7 +755,7 @@ class OrderFilter(BaseSearchFilter):
         fields = BaseSearchFilter.Meta.fields + ['order_id', 'status', 'platform']
 
 # Add custom relation filters
-OrderFilter.add_relation_filter('order_id', 'order_id', lookup_expr='exact', filter_class=NumberFilter)
+OrderFilter.add_relation_filter('order_id', 'order_id')
 OrderFilter.add_relation_filter('status', 'status')
 OrderFilter.add_relation_filter('platform', 'platform')
 
