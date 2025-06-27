@@ -27,7 +27,7 @@ jobs:
         run: ruff check .
 
       - name: format with Ruff
-        run: ruff --fix
+        run: ruff --fix .
 
       - name: Trigger Render deploy
         env:
