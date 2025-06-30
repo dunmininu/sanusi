@@ -34,9 +34,7 @@ class Migration(migrations.Migration):
                 ("payment_summary", models.JSONField()),
                 (
                     "delivery_date",
-                    models.DateTimeField(
-                        default=business.models.get_delivery_date, null=True
-                    ),
+                    models.DateTimeField(default=business.models.get_delivery_date, null=True),
                 ),
                 (
                     "status",
@@ -112,14 +110,10 @@ class Migration(migrations.Migration):
         ),
         migrations.AddIndex(
             model_name="order",
-            index=models.Index(
-                fields=["order_id"], name="business_or_order_i_19a9dc_idx"
-            ),
+            index=models.Index(fields=["order_id"], name="business_or_order_i_19a9dc_idx"),
         ),
         migrations.AddIndex(
             model_name="order",
-            index=models.Index(
-                fields=["last_updated"], name="business_or_last_up_3a5c69_idx"
-            ),
+            index=models.Index(fields=["last_updated"], name="business_or_last_up_3a5c69_idx"),
         ),
     ]

@@ -3,28 +3,29 @@
 from django.db import migrations, models
 import uuid
 
+
 def convert_to_uuids(apps, schema_editor):
-    User = apps.get_model('accounts', 'User')
-    EmailAddress = apps.get_model('accounts', 'EmailAddress')
-    
+    User = apps.get_model("accounts", "User")
+    EmailAddress = apps.get_model("accounts", "EmailAddress")
+
     # Create mapping of old ID -> new UUID
     user_id_map = {}
     for user in User.objects.all():
         new_uuid = uuid.uuid4()
         user.new_id = new_uuid
-        user.save(update_fields=['new_id'])
+        user.save(update_fields=["new_id"])
         user_id_map[user.id] = new_uuid
-    
+
     # Convert EmailAddresses
     for email in EmailAddress.objects.all():
         # Generate new UUID
         email.new_id = uuid.uuid4()
-        
+
         # Map user relationship
         if email.user_id:
             email.new_user = user_id_map.get(email.user_id)
-        
-        email.save(update_fields=['new_id', 'new_user'])
+
+        email.save(update_fields=["new_id", "new_user"])
 
 
 class Migration(migrations.Migration):
@@ -35,86 +36,75 @@ class Migration(migrations.Migration):
     operations = [
         # Step 1: Add temporary UUID fields
         migrations.AddField(
-            model_name='user',
-            name='new_id',
+            model_name="user",
+            name="new_id",
             field=models.UUIDField(null=True, unique=True),
         ),
         migrations.AddField(
-            model_name='emailaddress',
-            name='new_id',
+            model_name="emailaddress",
+            name="new_id",
             field=models.UUIDField(null=True, unique=True),
         ),
         migrations.AddField(
-            model_name='emailaddress',
-            name='new_user',
+            model_name="emailaddress",
+            name="new_user",
             field=models.UUIDField(null=True),
         ),
-        
         # Step 2: Populate UUID fields
         migrations.RunPython(convert_to_uuids, reverse_code=migrations.RunPython.noop),
-        
         # Step 3: Remove old fields
         migrations.RemoveField(
-            model_name='emailaddress',
-            name='user',
+            model_name="emailaddress",
+            name="user",
         ),
         migrations.RemoveField(
-            model_name='user',
-            name='id',
+            model_name="user",
+            name="id",
         ),
         migrations.RemoveField(
-            model_name='emailaddress',
-            name='id',
+            model_name="emailaddress",
+            name="id",
         ),
-        
         # Step 4: Rename new fields
         migrations.RenameField(
-            model_name='user',
-            old_name='new_id',
-            new_name='id',
+            model_name="user",
+            old_name="new_id",
+            new_name="id",
         ),
         migrations.RenameField(
-            model_name='emailaddress',
-            old_name='new_id',
-            new_name='id',
+            model_name="emailaddress",
+            old_name="new_id",
+            new_name="id",
         ),
         migrations.RenameField(
-            model_name='emailaddress',
-            old_name='new_user',
-            new_name='user_id',
+            model_name="emailaddress",
+            old_name="new_user",
+            new_name="user_id",
         ),
-        
         # Step 5: Set new fields as primary keys
         migrations.AlterField(
-            model_name='user',
-            name='id',
+            model_name="user",
+            name="id",
             field=models.UUIDField(
-                default=uuid.uuid4,
-                primary_key=True,
-                serialize=False,
-                unique=True
+                default=uuid.uuid4, primary_key=True, serialize=False, unique=True
             ),
         ),
         migrations.AlterField(
-            model_name='emailaddress',
-            name='id',
+            model_name="emailaddress",
+            name="id",
             field=models.UUIDField(
-                default=uuid.uuid4,
-                primary_key=True,
-                serialize=False,
-                unique=True
+                default=uuid.uuid4, primary_key=True, serialize=False, unique=True
             ),
         ),
-        
         # Step 6: Recreate foreign key
         migrations.AlterField(
-            model_name='emailaddress',
-            name='user_id',
+            model_name="emailaddress",
+            name="user_id",
             field=models.ForeignKey(
-                'accounts.User',
+                "accounts.User",
                 on_delete=models.CASCADE,
-                to_field='id',
-                db_column='user_id'
+                to_field="id",
+                db_column="user_id",
             ),
         ),
     ]

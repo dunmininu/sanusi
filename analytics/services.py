@@ -8,9 +8,9 @@ def total_customers_per_business(business):
 
 
 def get_unique_customer_count():
-    unique_customers = Customer.objects.annotate(
-        chat_count=Count("customer_chats")
-    ).filter(chat_count__gt=0)
+    unique_customers = Customer.objects.annotate(chat_count=Count("customer_chats")).filter(
+        chat_count__gt=0
+    )
     return unique_customers.count()
 
 
@@ -25,9 +25,7 @@ def get_customer_satisfaction():
     negative_messages = Chat.objects.filter(sentiment="negative").count()
 
     total_messages = positive_messages + neutral_messages + negative_messages
-    satisfaction = (
-        (positive_messages / total_messages) * 100 if total_messages > 0 else 0
-    )
+    satisfaction = (positive_messages / total_messages) * 100 if total_messages > 0 else 0
 
     return {
         "positive": positive_messages,
@@ -54,9 +52,7 @@ def get_abandonment_percentage():
     ).count()
 
     abandonment_percentage = (
-        (abandoned_interactions / total_interactions) * 100
-        if total_interactions > 0
-        else 0
+        (abandoned_interactions / total_interactions) * 100 if total_interactions > 0 else 0
     )
     return abandonment_percentage
 

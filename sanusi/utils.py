@@ -1,9 +1,11 @@
 from html.parser import HTMLParser
-import json, re, ast
+import json
+import re
+import ast
 
 from bs4 import BeautifulSoup
 
-from chat.models import Chat, Message
+from chat.models import Message
 
 
 def save_chat_and_message(chat, sender, message, response_json, channel):
@@ -38,35 +40,33 @@ def save_chat_and_message(chat, sender, message, response_json, channel):
         print("An error occurred:", str(e))
 
 
-def parse_answer_with_regex(answer):
-    try:
-        # Try to parse answer as JSON
-        response_json = json.loads(answer)
-    except (json.JSONDecodeError, ValueError):
-        # If it fails, try to parse it using regex
-        response_regex = r'"Response: (.*?)escalate_issue:'
-        response = re.search(response_regex, answer, re.DOTALL).group(1).strip()
-        pairs_regex = r"(\w+): ([^,]*)"
-        pairs = re.findall(pairs_regex, answer)
-        response_json = {"response": response}
-        for key, value in pairs:
-            if value == "true":
-                response_json[key] = True
-            elif value == "false":
-                response_json[key] = False
-            elif value == "null":
-                response_json[key] = None
-            else:
-                response_json[key] = value.strip()
-    return response_json
+# def parse_answer_with_regex(answer):
+#     try:
+#         # Try to parse answer as JSON
+#         response_json = json.loads(answer)
+#     except (json.JSONDecodeError, ValueError):
+#         # If it fails, try to parse it using regex
+#         response_regex = r'"Response: (.*?)escalate_issue:'
+#         response = re.search(response_regex, answer, re.DOTALL).group(1).strip()
+#         pairs_regex = r"(\w+): ([^,]*)"
+#         pairs = re.findall(pairs_regex, answer)
+#         response_json = {"response": response}
+#         for key, value in pairs:
+#             if value == "true":
+#                 response_json[key] = True
+#             elif value == "false":
+#                 response_json[key] = False
+#             elif value == "null":
+#                 response_json[key] = None
+#             else:
+#                 response_json[key] = value.strip()
+#     return response_json
 
 
 def parse_response_data(response_data):
     response_start = response_data.index("Response:")
     response_end = response_data.index("escalate_issue:")
-    response_text = (
-        response_data[response_start:response_end].replace("Response:", "").strip()
-    )
+    response_text = response_data[response_start:response_end].replace("Response:", "").strip()
 
     meta_start = response_end
     meta_data_text = response_data[meta_start:].strip()
@@ -123,9 +123,7 @@ def parse_json_from_answer(answer):
     if start == -1:
         raise ValueError("Could not find the start of JSON in the answer")
 
-    json_str = answer[
-        start + len("Here is the response in the specified format:") :
-    ].strip()
+    json_str = answer[start + len("Here is the response in the specified format:") :].strip()
     json_str = json_str.replace("'", '"')
 
     return json.loads(json_str)
@@ -162,10 +160,6 @@ def is_valid_format(response):
         return False
 
 
-def is_html(s):
-    return bool(BeautifulSoup(s, "html.parser").find())
-
-
 class MyHTMLParser(HTMLParser):
     def __init__(self):
         super().__init__()
@@ -189,7 +183,7 @@ def try_parse_json(answer):
     try:
         # Attempt to parse as JSON
         response_json = json.loads(answer)
-        if type(response_json) == dict:
+        if isinstance(response_json, dict):
             return response_json
     except json.JSONDecodeError:
         pass
@@ -199,7 +193,7 @@ def try_parse_json(answer):
     try:
         # Attempt to parse the modified string as JSON
         response_json = json.loads(answer_double_quotes)
-        if type(response_json) == dict:
+        if isinstance(response_json, dict):
             return response_json
     except json.JSONDecodeError:
         pass
@@ -207,7 +201,7 @@ def try_parse_json(answer):
     try:
         # If the above fails, attempt to parse as a Python dictionary string
         response_json = ast.literal_eval(answer)
-        if type(response_json) == dict:
+        if isinstance(response_json, dict) and is_valid_format(response_json):
             return response_json
     except (ValueError, SyntaxError):
         pass

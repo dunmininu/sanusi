@@ -1,24 +1,25 @@
-import requests
-import json
-import ast
+# import requests
+# import json
+# import ast
 import time
 
 from django.views.decorators.csrf import csrf_exempt
 from django.conf import settings
-from django.db import transaction
+
+# from django.db import transaction
 from django.core.exceptions import ObjectDoesNotExist
 
-
-from rest_framework.exceptions import ValidationError
 from rest_framework.response import Response
 from rest_framework.decorators import api_view
 from rest_framework import status, serializers, generics, mixins
 
 import openai
-from llama_index import GPTListIndex, LLMPredictor, PromptHelper, GPTVectorStoreIndex
+from llama_index import LLMPredictor, PromptHelper, GPTVectorStoreIndex
 from langchain import OpenAI as oai
 
-from .models import Message, ChannelTypes
+from chat.models import Message
+
+# from .models import Message, ChannelTypes
 from .serializers import (
     MessageInputSerializer,
     AllMessagesSerializer,
@@ -90,11 +91,20 @@ def generate_response_chat(prompt, max_tokens):
 
 def generate_response_chat_v2(prompt):
     field_prompts = [
-        "Please provide a well-structured response based on the knowledge base provided. Do not instruct the user to send any emails or make any phone calls. Your sole responsibility is to respond as instructed and assure the user that the issue has been escalated, if applicable. Always maintain a courteous and professional demeanor throughout your interactions. If there are requests beyond your knowledge base, you should not mention that you're an AI.",
-        'Should the issue be escalated? Type "true" if it should be escalated, or "false" if it should not.',
-        'If the issue should be escalated, type the name of the department it should be escalated to: "sales", "operations", "billing", or "engineering". If the issue should not be escalated, leave it empty.',
+        "Please provide a well-structured response based on the knowledge base provided. "
+        "Do not instruct the user to send any emails or make any phone calls. Your sole "
+        "responsibility is to respond as instructed and assure the user that the issue has "
+        "been escalated, if applicable. Always maintain a courteous and professional demeanor "
+        "throughout your interactions. If there are requests beyond your knowledge base, "
+        "you should not mention that you're an AI.",
+        'Should the issue be escalated? Type "true" if it should be '
+        'escalated, or "false" if it should not.',
+        "If the issue should be escalated, type the name of the department it "
+        'should be escalated to: "sales", "operations", "billing", or "engineering". '
+        "If the issue should not be escalated, leave it empty.",
         'Type the severity of the issue using only one word: "low", "medium", or "high".',
-        'Type the sentiment of the user\'s message using only one word: "positive", "negative", or "neutral".',
+        "Type the sentiment of the user's message using only one word: "
+        '"positive", "negative", or "neutral".',
     ]
     responses = []
     for field_prompt in field_prompts:
@@ -156,11 +166,21 @@ def generate_response_email(prompt):
 
 def generate_response_email_v2(prompt):
     field_prompts = [
-        "Please provide a well-structured response that could fit into an email body and would have a closing remark. Do not instruct the user to send any emails or make any phone calls. Your sole responsibility is to respond as instructed and assure the user that the issue has been escalated, if applicable. Always maintain a courteous and professional demeanor throughout your interactions.",
-        'Should the issue be escalated? Type the word "true" if it should be escalated, or "false" if it should not.',
-        'If the issue should be escalated, type the name of the department it should be escalated to: "sales", "operations", "billing", or "engineering". If the issue should not be escalated, type "null".',
+        "Please provide a well-structured response that could fit "
+        "into an email body and would have a closing remark. Do not instruct "
+        "the user to send any emails or make any phone calls. Your sole responsibility is "
+        "to respond as instructed and assure the user that the issue has "
+        "been escalated, if applicable. Always maintain a courteous "
+        "and professional demeanor throughout your interactions.",
+        'Should the issue be escalated? Type the word "true" if it should '
+        'be escalated, or "false" if it should not.',
+        "If the issue should be escalated, type the name of the department "
+        'it should be escalated to: "sales", "operations", "billing", '
+        'or "engineering". If the issue should not be escalated, type "null".',
         'Type the severity of the issue using only one word: "low", "medium", or "high".',
-        'Type the sentiment of the user\'s message using only one word: "positive", "negative", or "neutral".',
+        "Type the sentiment of the user's message "
+        'using only one word: "positive", '
+        '"negative", or "neutral".',
     ]
     responses = []
     for field_prompt in field_prompts:
@@ -209,9 +229,13 @@ def generate_response(prompt, tokens=200, temperature=0.5):
     This function uses OpenAI's GPT-3 to generate a response based on a given prompt.
 
     Parameters:
-    - prompt: A string which acts as the starting point for the AI to generate a response.
-    - tokens: The maximum number of tokens to generate. Fewer tokens may be generated if the total cost of tokens exceeds the model’s maximum limit.
-    - temperature: This parameter controls the randomness of the AI’s output. A higher value like 0.8 makes the output more random, while a lower value like 0.2 makes the output more deterministic.
+    - prompt: A string which acts as the starting point
+    for the AI to generate a response.
+    - tokens: The maximum number of tokens to generate. Fewer tokens may be generated
+    if the total cost of tokens exceeds the model’s maximum limit.
+    - temperature: This parameter controls the randomness of the AI’s output. A
+    higher value like 0.8 makes the output more random, while a lower value like
+    0.2 makes the output more deterministic.
 
     Returns: A string which is the AI's response.
     """
@@ -224,18 +248,18 @@ def generate_response(prompt, tokens=200, temperature=0.5):
     return response.choices[0].text.strip()
 
 
-def structure_response(
-    response, escalate_issue, escalation_department, severity, sentiment
-):
+def structure_response(response, escalate_issue, escalation_department, severity, sentiment):
     """
     This function structures a response in the desired format.
 
     Parameters:
     - response: The AI-generated response.
     - escalate_issue: A boolean indicating whether the issue needs to be escalated.
-    - escalation_department: The department to which the issue should be escalated. This is 'null' if escalate_issue is False.
+    - escalation_department: The department to which the issue should be escalated.
+        This is 'null' if escalate_issue is False.
     - severity: The severity of the issue, which can be 'low', 'medium', or 'high'.
-    - sentiment: The sentiment of the response, which can be 'positive', 'negative', or 'neutral'.
+    - sentiment: The sentiment of the response, which can be 'positive',
+        'negative', or 'neutral'.
 
     Returns: A dictionary representing the structured response.
     """
@@ -287,7 +311,10 @@ class SanusiMessageChannelViewSet(mixins.CreateModelMixin, generics.GenericAPIVi
                 prompt = [
                     {
                         "role": "assistant",
-                        "content": f"Knowledge base:{knowledge_base.content} Instructions: {instructions} Q:{message}\nA:",
+                        "content": f"""
+                            Knowledge base:{knowledge_base.content} 
+                            Instructions: {instructions} Q:{message}\nA:
+                        """,
                     },
                     {
                         "role": "user",
@@ -295,7 +322,7 @@ class SanusiMessageChannelViewSet(mixins.CreateModelMixin, generics.GenericAPIVi
                     },
                 ]
                 response = generate_response_chat(prompt)
-                conversation_id = response["id"]
+                conversation_id = response["id"]  # noqa F841
         except ObjectDoesNotExist:
             if not knowledge_base_prompt:
                 raise serializers.ValidationError("Invalid request data")
@@ -342,9 +369,7 @@ def get_single_chat_session(request, message_id):
     try:
         message_obj = Message.objects.get(message_id=message_id)
     except Message.DoesNotExist:
-        return Response(
-            {"message": "Message not found"}, status=status.HTTP_404_NOT_FOUND
-        )
+        return Response({"message": "Message not found"}, status=status.HTTP_404_NOT_FOUND)
     serializer = MessageSerializer(message_obj)
 
     # Return chat session

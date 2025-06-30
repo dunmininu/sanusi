@@ -24,7 +24,8 @@ jobs:
           pip install -r requirements.txt
 
       - name: Lint with Ruff
-        run: ruff check . --fix
+        run: ruff check .
+        continue-on-error: false
 
       - name: Trigger Render deploy
         env:

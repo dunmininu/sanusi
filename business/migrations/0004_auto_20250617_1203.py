@@ -3,38 +3,46 @@
 from django.db import migrations, models
 import uuid
 
+
 def convert_to_uuids(apps, schema_editor):
     # Create UUIDs for all models
     models_to_convert = [
-        'Subscription', 'EscalationDepartment', 'KnowledgeBase',
-        'Reply', 'Category', 'Product', 'Inventory'
+        "Subscription",
+        "EscalationDepartment",
+        "KnowledgeBase",
+        "Reply",
+        "Category",
+        "Product",
+        "Inventory",
     ]
-    
+
     for model_name in models_to_convert:
-        Model = apps.get_model('business', model_name)
+        Model = apps.get_model("business", model_name)
         for obj in Model.objects.all():
             # Generate new UUID
             obj.new_id = uuid.uuid4()
-            obj.save(update_fields=['new_id'])
+            obj.save(update_fields=["new_id"])
+
 
 def save_old_product_ids(apps, schema_editor):
-    Inventory = apps.get_model('business', 'Inventory')
+    Inventory = apps.get_model("business", "Inventory")
     for inv in Inventory.objects.all():
         inv.old_product_id = inv.product_id  # Use the actual foreign key ID
-        inv.save(update_fields=['old_product_id'])
+        inv.save(update_fields=["old_product_id"])
+
 
 def update_foreign_keys(apps, schema_editor):
     # Update Inventory foreign key to Product
-    Inventory = apps.get_model('business', 'Inventory')
-    Product = apps.get_model('business', 'Product')
-    
+    Inventory = apps.get_model("business", "Inventory")
+    Product = apps.get_model("business", "Product")
+
     for inv in Inventory.objects.all():
         if inv.old_product_id:
             try:
                 # Find the new product UUID
                 product = Product.objects.get(id=inv.old_product_id)
                 inv.new_product_id = product.new_id
-                inv.save(update_fields=['new_product_id'])
+                inv.save(update_fields=["new_product_id"])
             except Product.DoesNotExist:
                 pass
 
@@ -47,216 +55,186 @@ class Migration(migrations.Migration):
     operations = [
         # Add temporary fields
         migrations.AddField(
-            model_name='subscription',
-            name='new_id',
+            model_name="subscription",
+            name="new_id",
             field=models.UUIDField(null=True, unique=True),
         ),
         migrations.AddField(
-            model_name='escalationdepartment',
-            name='new_id',
+            model_name="escalationdepartment",
+            name="new_id",
             field=models.UUIDField(null=True, unique=True),
         ),
         migrations.AddField(
-            model_name='knowledgebase',
-            name='new_id',
+            model_name="knowledgebase",
+            name="new_id",
             field=models.UUIDField(null=True, unique=True),
         ),
         migrations.AddField(
-            model_name='reply',
-            name='new_id',
+            model_name="reply",
+            name="new_id",
             field=models.UUIDField(null=True, unique=True),
         ),
         migrations.AddField(
-            model_name='category',
-            name='new_id',
+            model_name="category",
+            name="new_id",
             field=models.UUIDField(null=True, unique=True),
         ),
         migrations.AddField(
-            model_name='product',
-            name='new_id',
+            model_name="product",
+            name="new_id",
             field=models.UUIDField(null=True, unique=True),
         ),
         migrations.AddField(
-            model_name='inventory',
-            name='new_id',
+            model_name="inventory",
+            name="new_id",
             field=models.UUIDField(null=True, unique=True),
         ),
-        
         # Add temporary fields for relationships
         migrations.AddField(
-            model_name='inventory',
-            name='new_product_id',
+            model_name="inventory",
+            name="new_product_id",
             field=models.UUIDField(null=True),
         ),
         migrations.AddField(
-            model_name='inventory',
-            name='old_product_id',
+            model_name="inventory",
+            name="old_product_id",
             field=models.IntegerField(null=True),
         ),
-        
         # Preserve old product IDs
         migrations.RunPython(save_old_product_ids, reverse_code=migrations.RunPython.noop),
-        
         # Generate UUIDs for all models
         migrations.RunPython(convert_to_uuids, reverse_code=migrations.RunPython.noop),
-        
         # Update relationships
         migrations.RunPython(update_foreign_keys, reverse_code=migrations.RunPython.noop),
-        
         # Remove old ID fields
         migrations.RemoveField(
-            model_name='subscription',
-            name='subscription_id',
+            model_name="subscription",
+            name="subscription_id",
         ),
         migrations.RemoveField(
-            model_name='escalationdepartment',
-            name='id',
+            model_name="escalationdepartment",
+            name="id",
         ),
         migrations.RemoveField(
-            model_name='knowledgebase',
-            name='knowledgebase_id',
+            model_name="knowledgebase",
+            name="knowledgebase_id",
         ),
         migrations.RemoveField(
-            model_name='knowledgebase',
-            name='id',
+            model_name="knowledgebase",
+            name="id",
         ),
         migrations.RemoveField(
-            model_name='reply',
-            name='id',
+            model_name="reply",
+            name="id",
         ),
         migrations.RemoveField(
-            model_name='category',
-            name='id',
+            model_name="category",
+            name="id",
         ),
         migrations.RemoveField(
-            model_name='product',
-            name='id',
+            model_name="product",
+            name="id",
         ),
         migrations.RemoveField(
-            model_name='inventory',
-            name='id',
+            model_name="inventory",
+            name="id",
         ),
-        
         # Remove the product foreign key
         migrations.RemoveField(
-            model_name='inventory',
-            name='product',
+            model_name="inventory",
+            name="product",
         ),
-        
         # Rename new fields to final names
         migrations.RenameField(
-            model_name='subscription',
-            old_name='new_id',
-            new_name='subscription_id',
+            model_name="subscription",
+            old_name="new_id",
+            new_name="subscription_id",
         ),
         migrations.RenameField(
-            model_name='escalationdepartment',
-            old_name='new_id',
-            new_name='id',
+            model_name="escalationdepartment",
+            old_name="new_id",
+            new_name="id",
         ),
         migrations.RenameField(
-            model_name='knowledgebase',
-            old_name='new_id',
-            new_name='knowledgebase_id',
+            model_name="knowledgebase",
+            old_name="new_id",
+            new_name="knowledgebase_id",
         ),
         migrations.RenameField(
-            model_name='reply',
-            old_name='new_id',
-            new_name='id',
+            model_name="reply",
+            old_name="new_id",
+            new_name="id",
         ),
         migrations.RenameField(
-            model_name='category',
-            old_name='new_id',
-            new_name='id',
+            model_name="category",
+            old_name="new_id",
+            new_name="id",
         ),
         migrations.RenameField(
-            model_name='product',
-            old_name='new_id',
-            new_name='id',
+            model_name="product",
+            old_name="new_id",
+            new_name="id",
         ),
         migrations.RenameField(
-            model_name='inventory',
-            old_name='new_id',
-            new_name='id',
+            model_name="inventory",
+            old_name="new_id",
+            new_name="id",
         ),
         migrations.RenameField(
-            model_name='inventory',
-            old_name='new_product_id',
-            new_name='product_id',
+            model_name="inventory",
+            old_name="new_product_id",
+            new_name="product_id",
         ),
-        
         # Set as primary keys
         migrations.AlterField(
-            model_name='subscription',
-            name='subscription_id',
+            model_name="subscription",
+            name="subscription_id",
             field=models.UUIDField(
-                default=uuid.uuid4,
-                primary_key=True,
-                serialize=False,
-                unique=True
+                default=uuid.uuid4, primary_key=True, serialize=False, unique=True
             ),
         ),
         migrations.AlterField(
-            model_name='escalationdepartment',
-            name='id',
+            model_name="escalationdepartment",
+            name="id",
             field=models.UUIDField(
-                default=uuid.uuid4,
-                primary_key=True,
-                serialize=False,
-                unique=True
+                default=uuid.uuid4, primary_key=True, serialize=False, unique=True
             ),
         ),
         migrations.AlterField(
-            model_name='knowledgebase',
-            name='knowledgebase_id',
+            model_name="knowledgebase",
+            name="knowledgebase_id",
             field=models.UUIDField(
-                default=uuid.uuid4,
-                primary_key=True,
-                serialize=False,
-                unique=True
+                default=uuid.uuid4, primary_key=True, serialize=False, unique=True
             ),
         ),
         migrations.AlterField(
-            model_name='reply',
-            name='id',
+            model_name="reply",
+            name="id",
             field=models.UUIDField(
-                default=uuid.uuid4,
-                primary_key=True,
-                serialize=False,
-                unique=True
+                default=uuid.uuid4, primary_key=True, serialize=False, unique=True
             ),
         ),
         migrations.AlterField(
-            model_name='category',
-            name='id',
+            model_name="category",
+            name="id",
             field=models.UUIDField(
-                default=uuid.uuid4,
-                primary_key=True,
-                serialize=False,
-                unique=True
+                default=uuid.uuid4, primary_key=True, serialize=False, unique=True
             ),
         ),
         migrations.AlterField(
-            model_name='product',
-            name='id',
+            model_name="product",
+            name="id",
             field=models.UUIDField(
-                default=uuid.uuid4,
-                primary_key=True,
-                serialize=False,
-                unique=True
+                default=uuid.uuid4, primary_key=True, serialize=False, unique=True
             ),
         ),
         migrations.AlterField(
-            model_name='inventory',
-            name='id',
+            model_name="inventory",
+            name="id",
             field=models.UUIDField(
-                default=uuid.uuid4,
-                primary_key=True,
-                serialize=False,
-                unique=True
+                default=uuid.uuid4, primary_key=True, serialize=False, unique=True
             ),
         ),
-        
         # Recreate the product foreign key using UUID
         # migrations.AddField(
         #     model_name='inventory',
@@ -268,10 +246,9 @@ class Migration(migrations.Migration):
         #         db_column='product_id'
         #     ),
         # ),
-        
         # Remove temporary field
         migrations.RemoveField(
-            model_name='inventory',
-            name='old_product_id',
+            model_name="inventory",
+            name="old_product_id",
         ),
     ]

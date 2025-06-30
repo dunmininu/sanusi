@@ -139,9 +139,7 @@ class Migration(migrations.Migration):
                 ("platform", models.CharField(blank=True, max_length=256, null=True)),
                 (
                     "identifier",
-                    models.CharField(
-                        blank=True, max_length=256, null=True, unique=True
-                    ),
+                    models.CharField(blank=True, max_length=256, null=True, unique=True),
                 ),
                 ("date_created", models.DateTimeField(auto_now_add=True, null=True)),
                 ("last_updated", models.DateTimeField(auto_now=True, null=True)),

@@ -32,16 +32,16 @@ from .serializers import (
     SanusiBusinessCreateSerializer,
     InventorySerializer,
     CategorySerializer,
-    OrderSerializer
+    OrderSerializer,
 )
-from sanusi_backend.classes.custom import  CustomPagination, BaseSearchFilter
+from sanusi_backend.classes.custom import CustomPagination, BaseSearchFilter
 
 
 class BusinessApiViewSet(viewsets.ModelViewSet):
     queryset = Business.objects.all()
     serializer_class = BusinessSerializer
     lookup_field = "company_id"
-    permission_classes = [IsAuthenticated] 
+    permission_classes = [IsAuthenticated]
 
     def get_object(self):
         return get_object_or_404(Business, company_id=self.kwargs.get("company_id"))
@@ -50,17 +50,19 @@ class BusinessApiViewSet(viewsets.ModelViewSet):
     @with_telemetry(span_name="create_business")
     def create(self, request, *args, current_span=None, **kwargs):
         try:
-            
             # Log sensitive data carefully - avoid logging passwords, tokens, etc.
-            safe_data = {k: v for k, v in request.data.items() 
-                    if k not in ['password', 'token', 'secret', 'key', 'access', 'refresh']}
-            
+            safe_data = {
+                k: v
+                for k, v in request.data.items()
+                if k not in ["password", "token", "secret", "key", "access", "refresh"]
+            }
+
             # Log request start
             logger.info(
                 "Creating business",
                 user_id=str(request.user.id),
                 user_email=request.user.email,
-                data_keys=list(safe_data.keys())
+                data_keys=list(safe_data.keys()),
             )
             serializer = self.get_serializer(data=request.data)
             serializer.is_valid(raise_exception=True)
@@ -68,22 +70,22 @@ class BusinessApiViewSet(viewsets.ModelViewSet):
 
             # Set success attributes using the current span
             if current_span:
-                current_span.set_attributes({
-                    "business.id": str(serializer.instance.company_id),
-                    "operation.success": True
-                })
-                
+                current_span.set_attributes(
+                    {
+                        "business.id": str(serializer.instance.company_id),
+                        "operation.success": True,
+                    }
+                )
+
             # Log success
             logger.info(
                 "Business created successfully",
                 business_id=str(serializer.instance.company_id),
-                user_id=str(request.user.id)
+                user_id=str(request.user.id),
             )
 
             headers = self.get_success_headers(serializer.data)
-            return Response(
-                serializer.data, status=status.HTTP_201_CREATED, headers=headers
-            )
+            return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
         except Exception as e:
             # Handle unexpected exceptions
             ErrorHandler.log_and_raise(
@@ -94,10 +96,9 @@ class BusinessApiViewSet(viewsets.ModelViewSet):
                 log_level="critical",
                 extra_data={
                     "exception_type": type(e).__name__,
-                    "user_id": str(request.user.id)
-                }
+                    "user_id": str(request.user.id),
+                },
             )
-
 
     @swagger_auto_schema(
         manual_parameters=[
@@ -124,19 +125,21 @@ class BusinessApiViewSet(viewsets.ModelViewSet):
     )
     @transaction.atomic
     @with_telemetry(span_name="update_business")
-    def update(self, request, *args, current_span=None,**kwargs):
+    def update(self, request, *args, current_span=None, **kwargs):
         try:
-            
             # Log sensitive data carefully - avoid logging passwords, tokens, etc.
-            safe_data = {k: v for k, v in request.data.items() 
-                        if k not in ['password', 'token', 'secret', 'key', 'access', 'refresh']}
+            safe_data = {
+                k: v
+                for k, v in request.data.items()
+                if k not in ["password", "token", "secret", "key", "access", "refresh"]
+            }
 
             # Log request start
             logger.info(
                 "update business",
                 user_id=str(request.user.id),
                 user_email=request.user.email,
-                data_keys=list(safe_data.keys())
+                data_keys=list(safe_data.keys()),
             )
             partial = kwargs.pop("partial", False)
             instance = self.get_object()
@@ -144,19 +147,20 @@ class BusinessApiViewSet(viewsets.ModelViewSet):
             serializer.is_valid(raise_exception=True)
             self.perform_update(serializer)
 
-
             # Set success attributes using the current span
             if current_span:
-                current_span.set_attributes({
-                    "business.id": str(serializer.instance.company_id),
-                    "operation.success": True
-                })
-                
+                current_span.set_attributes(
+                    {
+                        "business.id": str(serializer.instance.company_id),
+                        "operation.success": True,
+                    }
+                )
+
             # Log success
             logger.info(
                 "Business update successfully",
                 business_id=str(serializer.instance.company_id),
-                user_id=str(request.user.id)
+                user_id=str(request.user.id),
             )
             return Response(serializer.data)
         except Exception as e:
@@ -169,8 +173,8 @@ class BusinessApiViewSet(viewsets.ModelViewSet):
                 log_level="critical",
                 extra_data={
                     "exception_type": type(e).__name__,
-                    "user_id": str(request.user.id)
-                }
+                    "user_id": str(request.user.id),
+                },
             )
 
     def list(self, request, *args, **kwargs):
@@ -195,7 +199,7 @@ class KnowledgeBaseViewSet(
     serializer_class = KnowledgeBaseSerializer
     filter_backends = [filters.SearchFilter]
     search_fields = ["is_company_description"]
-    permission_classes = [IsAuthenticated] 
+    permission_classes = [IsAuthenticated]
 
     def perform_update(self, serializer):
         serializer.save()
@@ -242,9 +246,7 @@ class KnowledgeBaseViewSet(
         serializer.save(business=business)  # Pass the Business instance
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
-    @action(
-        detail=False, methods=["put"], url_path="(?P<knowledgebase_id>[^/.]+)/update"
-    )
+    @action(detail=False, methods=["put"], url_path="(?P<knowledgebase_id>[^/.]+)/update")
     def update_knowledge_base(self, request, *args, **kwargs):
         """
         Update the specified knowledge base for a specific business.
@@ -256,9 +258,7 @@ class KnowledgeBaseViewSet(
         self.perform_update(serializer)
         return Response(serializer.data)
 
-    @action(
-        detail=False, methods=["get"], url_path="(?P<knowledgebase_id>[^/.]+)/retrive"
-    )
+    @action(detail=False, methods=["get"], url_path="(?P<knowledgebase_id>[^/.]+)/retrive")
     def retrieve_knowledge_base(self, request, *args, **kwargs):
         instance = self.get_object()
         serializer = self.get_serializer(instance)
@@ -291,9 +291,7 @@ class KnowledgeBaseViewSet(
         serializer.is_valid(raise_exception=True)
         serializer.save(business=business)
         headers = self.get_success_headers(serializer.data)
-        return Response(
-            serializer.data, status=status.HTTP_201_CREATED, headers=headers
-        )
+        return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
 
     @action(
         detail=False,
@@ -342,7 +340,7 @@ class KnowledgeBaseViewSet(
 
 class SanusiBusinessViewSet(mixins.CreateModelMixin, viewsets.GenericViewSet):
     serializer_class = SanusiBusinessCreateSerializer
-    permission_classes = [IsAuthenticated] 
+    permission_classes = [IsAuthenticated]
 
     @transaction.atomic
     def create(self, request):
@@ -397,47 +395,51 @@ class SanusiBusinessViewSet(mixins.CreateModelMixin, viewsets.GenericViewSet):
         return Response(response_data, status=status.HTTP_201_CREATED)
 
 
-
-
 # For Product model
 class ProductFilter(BaseSearchFilter):
     class Meta(BaseSearchFilter.Meta):
         model = Product
-        fields = BaseSearchFilter.Meta.fields + ['category', 'category__name', 'sku']
+        fields = BaseSearchFilter.Meta.fields + ["category", "category__name", "sku"]
+
 
 # Add custom relation filters
-ProductFilter.add_relation_filter('category', 'category__id', lookup_expr='exact', filter_class=NumberFilter)
-ProductFilter.add_relation_filter('category__name', 'category__name')
-ProductFilter.add_relation_filter('sku', 'sku')
+ProductFilter.add_relation_filter(
+    "category", "category__id", lookup_expr="exact", filter_class=NumberFilter
+)
+ProductFilter.add_relation_filter("category__name", "category__name")
+ProductFilter.add_relation_filter("sku", "sku")
+
 
 class InventoryViewSet(
-    mixins.ListModelMixin, mixins.DestroyModelMixin, viewsets.GenericViewSet, mixins.CreateModelMixin,
+    mixins.ListModelMixin,
+    mixins.DestroyModelMixin,
+    viewsets.GenericViewSet,
+    mixins.CreateModelMixin,
     mixins.UpdateModelMixin,
 ):
     queryset = Product.objects.all()
     serializer_class = InventorySerializer
     lookup_field = "id"
-    permission_classes = [IsAuthenticated] 
+    permission_classes = [IsAuthenticated]
 
-    
     def get_object(self):
         # Get company_id from URL and filter products by it
         company_id = self.kwargs.get("company_id")
         return get_object_or_404(
-            Product, 
+            Product,
             id=self.kwargs.get("id"),
-            business_id=company_id  # Ensure product belongs to company
+            business_id=company_id,  # Ensure product belongs to company
         )
-    
+
     filter_backends = [
         django_filters.rest_framework.DjangoFilterBackend,
         filters.SearchFilter,
-        filters.OrderingFilter
+        filters.OrderingFilter,
     ]
     filterset_class = ProductFilter
-    search_fields = ['name', 'category_name', 'sku']
-    ordering_fields = ['date_created', 'last_updated', 'name', 'category_name', 'sku']
-    ordering = ['-date_created']  # Default ordering
+    search_fields = ["name", "category_name", "sku"]
+    ordering_fields = ["date_created", "last_updated", "name", "category_name", "sku"]
+    ordering = ["-date_created"]  # Default ordering
     pagination_class = CustomPagination
 
     def get_queryset(self):
@@ -445,11 +447,11 @@ class InventoryViewSet(
         company_id = self.kwargs.get("company_id")
         # Always filter by company_id when available
         return queryset.filter(business_id=company_id)
-    
+
     def list(self, request, *args, **kwargs):
         """
         List products with filtering and pagination
-        
+
         Query Parameters:
         - name: Filter by name (case-insensitive partial match)
         - email: Filter by email (case-insensitive partial match)
@@ -463,45 +465,45 @@ class InventoryViewSet(
         - page_size: Number of items per page (max 100)
         """
         return super().list(request, *args, **kwargs)
-    
-    
+
     @transaction.atomic
     @with_telemetry(span_name="create_product")
     def create(self, request, *args, current_span=None, **kwargs):
         try:
-            
             # Log sensitive data carefully - avoid logging passwords, tokens, etc.
-            safe_data = {k: v for k, v in request.data.items() 
-                        if k not in ['password', 'token', 'secret', 'key', 'access', 'refresh']}
-
+            safe_data = {
+                k: v
+                for k, v in request.data.items()
+                if k not in ["password", "token", "secret", "key", "access", "refresh"]
+            }
 
             # Log request start
             logger.info(
                 "Creating product",
                 user_id=str(request.user.id),
                 user_email=request.user.email,
-                data_keys=list(safe_data.keys())
+                data_keys=list(safe_data.keys()),
             )
 
             serializer = self.get_serializer(data=request.data)
             serializer.is_valid(raise_exception=True)
             self.perform_create(serializer)
 
-
             # Set success attributes using the current span
             if current_span:
-                current_span.set_attributes({
-                    "product.id": str(serializer.instance.id),
-                    "operation.success": True
-                })
-                
+                current_span.set_attributes(
+                    {
+                        "product.id": str(serializer.instance.id),
+                        "operation.success": True,
+                    }
+                )
+
             # Log success
             logger.info(
                 "product created successfully",
                 product_id=str(serializer.instance.id),
-                user_id=str(request.user.id)
+                user_id=str(request.user.id),
             )
-
 
             headers = self.get_success_headers(serializer.data)
             return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
@@ -515,52 +517,53 @@ class InventoryViewSet(
                 log_level="critical",
                 extra_data={
                     "exception_type": type(e).__name__,
-                    "user_id": str(request.user.id)
-                }
+                    "user_id": str(request.user.id),
+                },
             )
 
-    
     @transaction.atomic
     @with_telemetry(span_name="update_product")
     def update(self, request, *args, current_span=None, **kwargs):
         try:
-            
             # Log sensitive data carefully - avoid logging passwords, tokens, etc.
-            safe_data = {k: v for k, v in request.data.items() 
-                        if k not in ['password', 'token', 'secret', 'key', 'access', 'refresh']}
+            safe_data = {
+                k: v
+                for k, v in request.data.items()
+                if k not in ["password", "token", "secret", "key", "access", "refresh"]
+            }
 
             # Log request start
             logger.info(
                 "Updating product",
                 user_id=str(request.user.id),
                 user_email=request.user.email,
-                data_keys=list(safe_data.keys())
+                data_keys=list(safe_data.keys()),
             )
 
             # Get the instance to update
             instance = self.get_object()
             serializer = self.get_serializer(instance, data=request.data, partial=True)
-            
+
             # Validate the serializer
             serializer.is_valid(raise_exception=True)
-            
+
             # Save the updated instance
             self.perform_update(serializer)
             # Set success attributes using the current span
             if current_span:
-                current_span.set_attributes({
-                    "product.id": str(serializer.instance.id),
-                    "operation.success": True
-                })
-               
-                
+                current_span.set_attributes(
+                    {
+                        "product.id": str(serializer.instance.id),
+                        "operation.success": True,
+                    }
+                )
+
                 # Log success
                 logger.info(
                     "product updated successfully",
                     product_id=str(serializer.instance.id),
-                    user_id=str(request.user.id)
+                    user_id=str(request.user.id),
                 )
-
 
             headers = self.get_success_headers(serializer.data)
             return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
@@ -574,38 +577,41 @@ class InventoryViewSet(
                 log_level="critical",
                 extra_data={
                     "exception_type": type(e).__name__,
-                    "user_id": str(request.user.id)
-                }
+                    "user_id": str(request.user.id),
+                },
             )
 
+
 class CategoryViewSet(
-    mixins.ListModelMixin, mixins.DestroyModelMixin, viewsets.GenericViewSet, mixins.CreateModelMixin,
+    mixins.ListModelMixin,
+    mixins.DestroyModelMixin,
+    viewsets.GenericViewSet,
+    mixins.CreateModelMixin,
     mixins.UpdateModelMixin,
 ):
     queryset = Category.objects.all()
     serializer_class = CategorySerializer
     lookup_field = "id"
-    permission_classes = [IsAuthenticated] 
-
+    permission_classes = [IsAuthenticated]
 
     def get_object(self):
         # Get company_id from URL and filter cat by it
         company_id = self.kwargs.get("company_id")
         return get_object_or_404(
-            Category, 
+            Category,
             id=self.kwargs.get("id"),
-            business_id=company_id  # Ensure cat belongs to company
+            business_id=company_id,  # Ensure cat belongs to company
         )
-   
+
     filter_backends = [
         django_filters.rest_framework.DjangoFilterBackend,
         filters.SearchFilter,
-        filters.OrderingFilter
+        filters.OrderingFilter,
     ]
-    filterset_fields = ['name']
-    search_fields = ['name']
-    ordering_fields = ['date_created', 'last_updated', 'name']
-    ordering = ['-date_created']  # Default ordering
+    filterset_fields = ["name"]
+    search_fields = ["name"]
+    ordering_fields = ["date_created", "last_updated", "name"]
+    ordering = ["-date_created"]  # Default ordering
     pagination_class = CustomPagination
 
     # def get_queryset(self):
@@ -614,18 +620,17 @@ class CategoryViewSet(
     #     if company_id:
     #         queryset = queryset.filter(id=id)
     #     return queryset
-    
+
     def get_queryset(self):
         queryset = super().get_queryset()
         company_id = self.kwargs.get("company_id")
         # Always filter by company_id when available
         return queryset.filter(business_id=company_id)
-    
 
     def list(self, request, *args, **kwargs):
         """
         List category with filtering and pagination
-        
+
         Query Parameters:
         - name: Filter by name (case-insensitive partial match)
         - date_created_after: Filter categories created after this date (YYYY-MM-DD or YYYY-MM-DD HH:MM:SS)
@@ -636,47 +641,48 @@ class CategoryViewSet(
         - ordering: Order by field (prefix with - for descending)
         - page: Page number
         - page_size: Number of items per page (max 100)
-        
+
         """
         return super().list(request, *args, **kwargs)
-    
 
     @transaction.atomic
     @with_telemetry(span_name="create_category")
     def create(self, request, *args, current_span=None, **kwargs):
         try:
-            
             # Log sensitive data carefully - avoid logging passwords, tokens, etc.
-            safe_data = {k: v for k, v in request.data.items() 
-                        if k not in ['password', 'token', 'secret', 'key', 'access', 'refresh']}
+            safe_data = {
+                k: v
+                for k, v in request.data.items()
+                if k not in ["password", "token", "secret", "key", "access", "refresh"]
+            }
 
             # Log request start
             logger.info(
                 "Creating category",
                 user_id=str(request.user.id),
                 user_email=request.user.email,
-                data_keys=list(safe_data.keys())
+                data_keys=list(safe_data.keys()),
             )
 
             serializer = self.get_serializer(data=request.data)
             serializer.is_valid(raise_exception=True)
             self.perform_create(serializer)
 
-               
             # Set success attributes using the current span
             if current_span:
-                current_span.set_attributes({
-                    "category.id": str(serializer.instance.id),
-                    "operation.success": True
-                })
-                
+                current_span.set_attributes(
+                    {
+                        "category.id": str(serializer.instance.id),
+                        "operation.success": True,
+                    }
+                )
+
             # Log success
             logger.info(
                 "category created successfully",
                 category_id=str(serializer.instance.id),
-                user_id=str(request.user.id)
+                user_id=str(request.user.id),
             )
-
 
             headers = self.get_success_headers(serializer.data)
             return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
@@ -690,26 +696,27 @@ class CategoryViewSet(
                 log_level="critical",
                 extra_data={
                     "exception_type": type(e).__name__,
-                    "user_id": str(request.user.id)
-                }
+                    "user_id": str(request.user.id),
+                },
             )
 
-    
     @transaction.atomic
     @with_telemetry(span_name="update_category")
     def update(self, request, *args, current_span=None, **kwargs):
         try:
-            
             # Log sensitive data carefully - avoid logging passwords, tokens, etc.
-            safe_data = {k: v for k, v in request.data.items() 
-                        if k not in ['password', 'token', 'secret', 'key', 'access', 'refresh']}
+            safe_data = {
+                k: v
+                for k, v in request.data.items()
+                if k not in ["password", "token", "secret", "key", "access", "refresh"]
+            }
 
             # Log request start
             logger.info(
                 "Updating category",
                 user_id=str(request.user.id),
                 user_email=request.user.email,
-                data_keys=list(safe_data.keys())
+                data_keys=list(safe_data.keys()),
             )
 
             serializer = self.get_serializer(data=request.data)
@@ -718,18 +725,19 @@ class CategoryViewSet(
 
             # Set success attributes using the current span
             if current_span:
-                current_span.set_attributes({
-                    "category.id": str(serializer.instance.category.id),
-                    "operation.success": True
-                })
-                
+                current_span.set_attributes(
+                    {
+                        "category.id": str(serializer.instance.category.id),
+                        "operation.success": True,
+                    }
+                )
+
             # Log success
             logger.info(
                 "category updated successfully",
                 category_id=str(serializer.instance.category.id),
-                user_id=str(request.user.id)
+                user_id=str(request.user.id),
             )
-
 
             headers = self.get_success_headers(serializer.data)
             return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
@@ -743,54 +751,65 @@ class CategoryViewSet(
                 log_level="critical",
                 extra_data={
                     "exception_type": type(e).__name__,
-                    "user_id": str(request.user.id)
-                }
+                    "user_id": str(request.user.id),
+                },
             )
 
-    
+
 # For Order model
 class OrderFilter(BaseSearchFilter):
     class Meta(BaseSearchFilter.Meta):
         model = Order
-        fields = BaseSearchFilter.Meta.fields + ['order_id', 'status', 'platform']
+        fields = BaseSearchFilter.Meta.fields + ["order_id", "status", "platform"]
+
 
 # Add custom relation filters
-OrderFilter.add_relation_filter('order_id', 'order_id')
-OrderFilter.add_relation_filter('status', 'status')
-OrderFilter.add_relation_filter('platform', 'platform')
+OrderFilter.add_relation_filter("order_id", "order_id")
+OrderFilter.add_relation_filter("status", "status")
+OrderFilter.add_relation_filter("platform", "platform")
 
 
 class OrderViewSet(
-    mixins.ListModelMixin, mixins.DestroyModelMixin, viewsets.GenericViewSet, 
-    mixins.CreateModelMixin, mixins.UpdateModelMixin, mixins.RetrieveModelMixin,
+    mixins.ListModelMixin,
+    mixins.DestroyModelMixin,
+    viewsets.GenericViewSet,
+    mixins.CreateModelMixin,
+    mixins.UpdateModelMixin,
+    mixins.RetrieveModelMixin,
 ):
-    queryset = Order.objects.select_related('customer').prefetch_related(
-        'order_products__product', 'order_products__product__category'
+    queryset = Order.objects.select_related("customer").prefetch_related(
+        "order_products__product", "order_products__product__category"
     )
     serializer_class = OrderSerializer
     lookup_field = "id"
-    permission_classes = [IsAuthenticated] 
+    permission_classes = [IsAuthenticated]
 
     def get_object(self):
         # Get company_id from URL and filter orders by it
         company_id = self.kwargs.get("company_id")
         return get_object_or_404(
-            Order.objects.select_related('customer').prefetch_related(
-                'order_products__product', 'order_products__product__category'
-            ), 
+            Order.objects.select_related("customer").prefetch_related(
+                "order_products__product", "order_products__product__category"
+            ),
             id=self.kwargs.get("id"),
-            business_id=company_id  # Ensure order belongs to company
+            business_id=company_id,  # Ensure order belongs to company
         )
-    
+
     filter_backends = [
         django_filters.rest_framework.DjangoFilterBackend,
         filters.SearchFilter,
-        filters.OrderingFilter
+        filters.OrderingFilter,
     ]
     filterset_class = OrderFilter
-    search_fields = ['order_id', 'customer__name', 'customer__email', 'status']
-    ordering_fields = ['date_created', 'last_updated', 'order_id', 'status', 'delivery_date']
-    ordering = ['-date_created']  # Default ordering
+    search_fields = ["order_id", "customer__name", "customer__email", "status"]
+    ordering_fields = [
+        "date_created",
+        "last_updated",
+        "order_id",
+        "status",
+        "delivery_date",
+    ]
+    ordering = ["-date_created"]  # Default ordering
     pagination_class = CustomPagination
 
     def get_queryset(self):
@@ -798,11 +817,11 @@ class OrderViewSet(
         company_id = self.kwargs.get("company_id")
         # Always filter by company_id when available
         return queryset.filter(business_id=company_id)
-    
+
     def list(self, request, *args, **kwargs):
         """
         List orders with filtering and pagination
-        
+
         Query Parameters:
         - order_id: Filter by order ID (exact match)
         - status: Filter by status
@@ -817,21 +836,24 @@ class OrderViewSet(
         - page_size: Number of items per page (max 100)
         """
         return super().list(request, *args, **kwargs)
-    
+
     @transaction.atomic
     @with_telemetry(span_name="create_order")
     def create(self, request, *args, current_span=None, **kwargs):
         try:
             # Log sensitive data carefully - avoid logging passwords, tokens, etc.
-            safe_data = {k: v for k, v in request.data.items() 
-                        if k not in ['password', 'token', 'secret', 'key', 'access', 'refresh']}
+            safe_data = {
+                k: v
+                for k, v in request.data.items()
+                if k not in ["password", "token", "secret", "key", "access", "refresh"]
+            }
 
             # Log request start
             logger.info(
                 "Creating order",
                 user_id=str(request.user.id),
                 user_email=request.user.email,
-                data_keys=list(safe_data.keys())
+                data_keys=list(safe_data.keys()),
             )
 
             serializer = self.get_serializer(data=request.data)
@@ -840,23 +862,25 @@ class OrderViewSet(
 
             # Set success attributes using the current span
             if current_span:
-                current_span.set_attributes({
-                    "order.id": str(serializer.instance.id),
-                    "order.order_id": serializer.instance.order_id,
-                    "operation.success": True
-                })
-                
+                current_span.set_attributes(
+                    {
+                        "order.id": str(serializer.instance.id),
+                        "order.order_id": serializer.instance.order_id,
+                        "operation.success": True,
+                    }
+                )
+
             # Log success
             logger.info(
                 "Order created successfully",
                 order_id=str(serializer.instance.id),
                 order_number=serializer.instance.order_id,
-                user_id=str(request.user.id)
+                user_id=str(request.user.id),
             )
 
             headers = self.get_success_headers(serializer.data)
             return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
-        
+
         except Exception as e:
             # Handle unexpected exceptions
             ErrorHandler.log_and_raise(
@@ -867,8 +891,8 @@ class OrderViewSet(
                 log_level="critical",
                 extra_data={
                     "exception_type": type(e).__name__,
-                    "user_id": str(request.user.id)
-                }
+                    "user_id": str(request.user.id),
+                },
             )
 
     @transaction.atomic
@@ -876,45 +900,50 @@ class OrderViewSet(
     def update(self, request, *args, current_span=None, **kwargs):
         try:
             # Log sensitive data carefully - avoid logging passwords, tokens, etc.
-            safe_data = {k: v for k, v in request.data.items() 
-                        if k not in ['password', 'token', 'secret', 'key', 'access', 'refresh']}
+            safe_data = {
+                k: v
+                for k, v in request.data.items()
+                if k not in ["password", "token", "secret", "key", "access", "refresh"]
+            }
 
             # Log request start
             logger.info(
                 "Updating order",
                 user_id=str(request.user.id),
                 user_email=request.user.email,
-                data_keys=list(safe_data.keys())
+                data_keys=list(safe_data.keys()),
             )
 
             # Get the instance to update
             instance = self.get_object()
             serializer = self.get_serializer(instance, data=request.data, partial=True)
-            
+
             # Validate the serializer
             serializer.is_valid(raise_exception=True)
-            
+
             # Save the updated instance
             self.perform_update(serializer)
-            
+
             # Set success attributes using the current span
             if current_span:
-                current_span.set_attributes({
-                    "order.id": str(serializer.instance.id),
-                    "order.order_id": serializer.instance.order_id,
-                    "operation.success": True
-                })
-                
+                current_span.set_attributes(
+                    {
+                        "order.id": str(serializer.instance.id),
+                        "order.order_id": serializer.instance.order_id,
+                        "operation.success": True,
+                    }
+                )
+
             # Log success
             logger.info(
                 "Order updated successfully",
                 order_id=str(serializer.instance.id),
                 order_number=serializer.instance.order_id,
-                user_id=str(request.user.id)
+                user_id=str(request.user.id),
             )
 
             return Response(serializer.data, status=status.HTTP_200_OK)
-        
+
         except Exception as e:
             # Handle unexpected exceptions
             ErrorHandler.log_and_raise(
@@ -925,6 +954,6 @@ class OrderViewSet(
                 log_level="critical",
                 extra_data={
                     "exception_type": type(e).__name__,
-                    "user_id": str(request.user.id)
-                }
+                    "user_id": str(request.user.id),
+                },
             )

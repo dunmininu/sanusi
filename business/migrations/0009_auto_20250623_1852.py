@@ -2,6 +2,7 @@
 
 from django.db import migrations, models
 
+
 class Migration(migrations.Migration):
     dependencies = [
         ("business", "0008_alter_product_category"),
@@ -10,45 +11,41 @@ class Migration(migrations.Migration):
     operations = [
         # Step 1: Make category field nullable temporarily
         migrations.AlterField(
-            model_name='product',
-            name='category',
+            model_name="product",
+            name="category",
             field=models.ForeignKey(
-                to='business.Category',
+                to="business.Category",
                 on_delete=models.CASCADE,
                 null=True,
                 blank=True,
-                related_name='products',
-                db_index=True
+                related_name="products",
+                db_index=True,
             ),
         ),
-        
         # Step 2: Remove the old foreign key constraint
         migrations.RunSQL(
             "ALTER TABLE business_product DROP CONSTRAINT IF EXISTS business_product_category_id_fkey;",
-            reverse_sql=migrations.RunSQL.noop
+            reverse_sql=migrations.RunSQL.noop,
         ),
-        
         # Step 3: Change column type to UUID
         migrations.RunSQL(
             "ALTER TABLE business_product ALTER COLUMN category_id TYPE UUID USING category_id::text::uuid;",
-            reverse_sql="ALTER TABLE business_product ALTER COLUMN category_id TYPE bigint USING category_id::text::bigint;"
+            reverse_sql="ALTER TABLE business_product ALTER COLUMN category_id TYPE bigint USING category_id::text::bigint;",
         ),
-        
         # Step 4: Re-add foreign key constraint
         migrations.RunSQL(
             "ALTER TABLE business_product ADD CONSTRAINT business_product_category_id_fkey FOREIGN KEY (category_id) REFERENCES business_category(id) DEFERRABLE INITIALLY DEFERRED;",
-            reverse_sql="ALTER TABLE business_product DROP CONSTRAINT business_product_category_id_fkey;"
+            reverse_sql="ALTER TABLE business_product DROP CONSTRAINT business_product_category_id_fkey;",
         ),
-        
         # Step 5: Make category field non-nullable again
         migrations.AlterField(
-            model_name='product',
-            name='category',
+            model_name="product",
+            name="category",
             field=models.ForeignKey(
-                to='business.Category',
+                to="business.Category",
                 on_delete=models.CASCADE,
-                related_name='products',
-                db_index=True
+                related_name="products",
+                db_index=True,
             ),
         ),
     ]

@@ -4,24 +4,28 @@ from django.db import models
 from django.core.validators import MinValueValidator
 from django.utils import timezone
 from sanusi_backend.classes.base_model import BaseModel
+
 # from chat.models import Customer
 from decimal import Decimal
 
 
 class BusinessTypeChoices(models.TextChoices):
-    ECOMMERCE = 'ecommerce'
-    FINANCE = 'finance'
-    MEDICAL = 'medical'
-    SAAS = 'saas'
+    ECOMMERCE = "ecommerce"
+    FINANCE = "finance"
+    MEDICAL = "medical"
+    SAAS = "saas"
 
-CANCELLED = 'CANCELLED'
-PENDING = 'PENDING'
-PROCESSING = 'PROCESSING'
-SHIPPED = 'SHIPPED' 
-DELIVERED = 'DELIVERED'
+
+CANCELLED = "CANCELLED"
+PENDING = "PENDING"
+PROCESSING = "PROCESSING"
+SHIPPED = "SHIPPED"
+DELIVERED = "DELIVERED"
+
 
 def get_delivery_date():
     return datetime.today() + timedelta(days=2)
+
 
 class Business(BaseModel):
     # Unique identifier for the business
@@ -63,11 +67,11 @@ class Business(BaseModel):
     status = models.CharField(
         max_length=20,
         choices=[
-            ('active', 'Active'),
-            ('inactive', 'Inactive'),
-            ('pending', 'Pending'),
+            ("active", "Active"),
+            ("inactive", "Inactive"),
+            ("pending", "Pending"),
         ],
-        default='active',
+        default="active",
     )
 
     # Notes or comments
@@ -87,7 +91,7 @@ class Subscription(BaseModel):
     business = models.OneToOneField(
         Business,
         on_delete=models.CASCADE,
-        related_name='subscription',
+        related_name="subscription",
     )
 
     # Subscription plan or type
@@ -110,14 +114,13 @@ class Subscription(BaseModel):
         return f"{self.business.name} - {self.plan} Subscription"
 
 
-
 class EscalationDepartment(BaseModel):
-    id = models.UUIDField(
-        default=uuid.uuid4, unique=True, db_index=True, primary_key=True
-    )
+    id = models.UUIDField(default=uuid.uuid4, unique=True, db_index=True, primary_key=True)
     name = models.CharField(max_length=50)
     business = models.ForeignKey(
-        Business, on_delete=models.CASCADE, related_name="escalation_departments",
+        Business,
+        on_delete=models.CASCADE,
+        related_name="escalation_departments",
     )
 
 
@@ -135,18 +138,14 @@ class KnowledgeBase(BaseModel):
 
 
 class Reply(BaseModel):
-    id = models.UUIDField(
-        default=uuid.uuid4, unique=True, db_index=True, primary_key=True
-    )
+    id = models.UUIDField(default=uuid.uuid4, unique=True, db_index=True, primary_key=True)
     reply = models.TextField()
     to_be_escalated = models.BooleanField()
     sentiment = models.CharField(max_length=20)
 
 
 class Category(BaseModel):
-    id = models.UUIDField(
-        default=uuid.uuid4, unique=True, db_index=True, primary_key=True
-    )
+    id = models.UUIDField(default=uuid.uuid4, unique=True, db_index=True, primary_key=True)
     name = models.CharField(max_length=100)
     business = models.ForeignKey(
         Business, on_delete=models.CASCADE, related_name="category", db_index=True
@@ -157,10 +156,10 @@ class Category(BaseModel):
 
 
 class Product(BaseModel):
-    id = models.UUIDField(
-        default=uuid.uuid4, unique=True, db_index=True, primary_key=True
+    id = models.UUIDField(default=uuid.uuid4, unique=True, db_index=True, primary_key=True)
+    category = models.ForeignKey(
+        Category, on_delete=models.CASCADE, related_name="products", db_index=True
     )
-    category = models.ForeignKey(Category, on_delete=models.CASCADE, related_name='products', db_index=True)
     name = models.CharField(max_length=200)
     sku = models.CharField(max_length=200, unique=True)
     description = models.TextField(blank=True)
@@ -174,29 +173,29 @@ class Product(BaseModel):
 
     def __str__(self):
         return self.name
-    
+
     def add_to_bundle(self, item, quantity=1):
         """Add an item to the bundle"""
         if isinstance(self.bundle, dict):
             self.bundle[item] = self.bundle.get(item, 0) + quantity
         elif isinstance(self.bundle, list):
             self.bundle.append(item)
-        self.save(update_fields=['bundle'])
-    
+        self.save(update_fields=["bundle"])
+
     def remove_from_bundle(self, item):
         """Remove an item from the bundle"""
         if isinstance(self.bundle, dict) and item in self.bundle:
             del self.bundle[item]
         elif isinstance(self.bundle, list) and item in self.bundle:
             self.bundle.remove(item)
-        self.save(update_fields=['bundle'])
-    
+        self.save(update_fields=["bundle"])
+
     def get_bundle_items(self):
         """Get all items in the bundle"""
         if isinstance(self.bundle, dict):
             return list(self.bundle.keys())
         return self.bundle or []
-    
+
     def has_item_in_bundle(self, item):
         """Check if an item is in the bundle"""
         if isinstance(self.bundle, dict):
@@ -205,9 +204,7 @@ class Product(BaseModel):
 
 
 class Inventory(BaseModel):
-    id = models.UUIDField(
-        default=uuid.uuid4, unique=True, db_index=True, primary_key=True
-    )
+    id = models.UUIDField(default=uuid.uuid4, unique=True, db_index=True, primary_key=True)
     product = models.ForeignKey(Product, on_delete=models.CASCADE)
     quantity = models.PositiveIntegerField()
     timestamp = models.DateTimeField(auto_now_add=True)
@@ -216,24 +213,23 @@ class Inventory(BaseModel):
         return f"{self.product.name} - {self.quantity}"
 
 
-
 class Order(BaseModel):
     STATUSES = (
-        (CANCELLED, CANCELLED), (PENDING, PENDING), (PROCESSING, PROCESSING),
-        (SHIPPED, SHIPPED), (DELIVERED, DELIVERED)
+        (CANCELLED, CANCELLED),
+        (PENDING, PENDING),
+        (PROCESSING, PROCESSING),
+        (SHIPPED, SHIPPED),
+        (DELIVERED, DELIVERED),
     )
 
-    id = models.UUIDField(
-        default=uuid.uuid4, unique=True, db_index=True, primary_key=True
-    )
+    id = models.UUIDField(default=uuid.uuid4, unique=True, db_index=True, primary_key=True)
     order_id = models.CharField(max_length=20, unique=True, null=False, blank=True)
     delivery_info = models.JSONField()
     payment_summary = models.JSONField()
     delivery_date = models.DateTimeField(default=get_delivery_date, null=True)
-    status = models.CharField(
-        choices=STATUSES, max_length=60, default=PENDING)
+    status = models.CharField(choices=STATUSES, max_length=60, default=PENDING)
     customer = models.ForeignKey(
-        'chat.Customer',
+        "chat.Customer",
         on_delete=models.CASCADE,
         related_name="customer_orders",
     )
@@ -243,33 +239,30 @@ class Order(BaseModel):
     )
 
     def __str__(self):
-        return f"{self.order_id} - {self.status}" 
+        return f"{self.order_id} - {self.status}"
 
     def save(self, *args, **kwargs):
         if not self.order_id:
             self.order_id = self._generate_order_id_simple()
         super().save(*args, **kwargs)
 
-    @classmethod 
+    @classmethod
     def _generate_order_id_simple(cls):
         """
         Simplified version using database row counting.
         Good balance between performance and simplicity.
         """
         # Count existing orders + 1 (handles deletions better than max)
-        next_number = cls.objects.filter(
-            order_id__startswith='ORD-'
-        ).count() + 1
-        
+        next_number = cls.objects.filter(order_id__startswith="ORD-").count() + 1
+
         # Handle edge case where count might not reflect actual max number
         while cls.objects.filter(order_id=f"ORD-{next_number:03d}").exists():
             next_number += 1
-            
+
         return f"ORD-{next_number:03d}"
 
     def product_count(self):
         return self.order_products.count()
-
 
     def aggregate(self):
         """
@@ -277,66 +270,65 @@ class Order(BaseModel):
         Gets VAT from existing payment_summary, calculates net_total from order products,
         then calculates total (net_total + vat) and updates payment_summary.
         """
-        
-        # Get existing VAT from payment_summary (default to 0 if not present)
-        vat_amount = Decimal(str(self.payment_summary.get('vat', 0)))
 
-        delivery_fee = Decimal(str(self.payment_summary.get('delivery_fee', 0)))
-        
+        # Get existing VAT from payment_summary (default to 0 if not present)
+        vat_amount = Decimal(str(self.payment_summary.get("vat", 0)))
+
+        delivery_fee = Decimal(str(self.payment_summary.get("delivery_fee", 0)))
+
         # Calculate net_total from all order products
-        net_total = sum(
-            item.price * item.quantity 
-            for item in self.order_products.all()
-        )
-        
+        net_total = sum(item.price * item.quantity for item in self.order_products.all())
+
         # Ensure net_total is Decimal for accurate calculation
         if not isinstance(net_total, Decimal):
-            net_total = Decimal('0')
-        
+            net_total = Decimal("0")
+
         # Calculate total (net_total + vat)
         total = net_total + vat_amount + delivery_fee
-        
+
         # Update payment_summary with calculated values
-        self.payment_summary.update({
-            'net_total': float(net_total),  # Convert Decimal to float for JSON
-            'total': float(total),
-            'vat': float(vat_amount),  # Ensure vat is also float
-            'delivery_fee': float(delivery_fee)
-        })
-        
+        self.payment_summary.update(
+            {
+                "net_total": float(net_total),  # Convert Decimal to float for JSON
+                "total": float(total),
+                "vat": float(vat_amount),  # Ensure vat is also float
+                "delivery_fee": float(delivery_fee),
+            }
+        )
+
         # Save the updated payment_summary
-        self.save(update_fields=['payment_summary'])
-        
+        self.save(update_fields=["payment_summary"])
+
         return {
-            'net_total': float(net_total),
-            'vat': float(vat_amount),
-            'total': float(total)
+            "net_total": float(net_total),
+            "vat": float(vat_amount),
+            "total": float(total),
         }
-    
+
     class Meta:
         # ordering = ['-last_updated']  # Orders by newest first
         indexes = [
-            models.Index(fields=['order_id']),
-            models.Index(fields=['last_updated']),
+            models.Index(fields=["order_id"]),
+            models.Index(fields=["last_updated"]),
         ]
-
 
     # Your original (slow)
     # Order.objects.filter(...).order_by('order_id').last()  # O(n log n)
 
-    # Optimized (fast) 
-    #Order.objects.filter(...).aggregate(Max('order_id'))   # O(1)
+    # Optimized (fast)
+    # Order.objects.filter(...).aggregate(Max('order_id'))   # O(1)
+
 
 class OrderProduct(BaseModel):
-    id = models.UUIDField(
-        default=uuid.uuid4, unique=True, db_index=True, primary_key=True
-    )
+    id = models.UUIDField(default=uuid.uuid4, unique=True, db_index=True, primary_key=True)
     product = models.ForeignKey(Product, on_delete=models.CASCADE)
     quantity = models.PositiveIntegerField()
     price = models.DecimalField(max_digits=10, decimal_places=2)
-    order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name='order_products')
+    order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name="order_products")
     meta = models.JSONField()
 
     class Meta:
-        unique_together = ['order', 'product'] # prevent duplicate products in the same order
-
+        unique_together = [
+            "order",
+            "product",
+        ]  # prevent duplicate products in the same order

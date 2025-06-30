@@ -6,6 +6,7 @@ from sanusi_backend.classes.base_model import BaseModel
 
 # from business.models import Business
 
+
 # class ActiveManager(models.Manager):
 #     def get_queryset(self):
 #         return super().get_queryset().filter(is_deleted=False)
@@ -29,14 +30,15 @@ class Customer(BaseModel):
         default=uuid.uuid4, unique=True, db_index=True, primary_key=True
     )
     business = models.ForeignKey(
-        'business.Business', on_delete=models.CASCADE, related_name="customer",
+        "business.Business",
+        on_delete=models.CASCADE,
+        related_name="customer",
     )
     name = models.CharField(max_length=256)
     email = models.EmailField(null=True, blank=True)
     phone_number = models.CharField(max_length=20, null=True, blank=True)
     platform = models.CharField(max_length=256, null=True, blank=True)
     identifier = models.CharField(max_length=256, null=True, blank=True, unique=True)
-    
 
     def generate_identifier(self):
         name = self.name.replace(" ", "")
@@ -50,9 +52,7 @@ class Customer(BaseModel):
 
 
 class Chat(BaseModel):
-    id = models.UUIDField(
-        default=uuid.uuid4, unique=True, db_index=True, primary_key=True
-    )
+    id = models.UUIDField(default=uuid.uuid4, unique=True, db_index=True, primary_key=True)
     customer = models.ForeignKey(
         Customer,
         on_delete=models.CASCADE,
@@ -101,9 +101,7 @@ class SENDER_CHOICES(models.TextChoices):
 
 
 class Message(BaseModel):
-    id = models.UUIDField(
-        default=uuid.uuid4, unique=True, db_index=True, primary_key=True
-    )
+    id = models.UUIDField(default=uuid.uuid4, unique=True, db_index=True, primary_key=True)
     chat = models.ForeignKey(Chat, on_delete=models.CASCADE, related_name="messages")
     sender = models.CharField(
         max_length=256,
