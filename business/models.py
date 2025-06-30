@@ -162,7 +162,7 @@ class Product(BaseModel):
     # )
     category = models.ForeignKey(Category, on_delete=models.CASCADE, related_name='products', db_index=True)
     name = models.CharField(max_length=200)
-    sku = models.CharField(max_length=200, unique=True)
+    serial_number = models.CharField(max_length=200, db_index=True, null=True, blank=True)
     description = models.TextField(blank=True)
     price = models.DecimalField(max_digits=10, decimal_places=2)
     stock_quantity = models.PositiveIntegerField()
@@ -202,6 +202,11 @@ class Product(BaseModel):
         if isinstance(self.bundle, dict):
             return item in self.bundle
         return item in (self.bundle or [])
+    
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=['business', 'serial_number'], name='unique_serial_per_business')
+        ]
 
 
 class Inventory(BaseModel):

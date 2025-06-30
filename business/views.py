@@ -403,12 +403,12 @@ class SanusiBusinessViewSet(mixins.CreateModelMixin, viewsets.GenericViewSet):
 class ProductFilter(BaseSearchFilter):
     class Meta(BaseSearchFilter.Meta):
         model = Product
-        fields = BaseSearchFilter.Meta.fields + ['category', 'category__name', 'sku']
+        fields = BaseSearchFilter.Meta.fields + ['category', 'category__name', 'serial_number']
 
 # Add custom relation filters
 ProductFilter.add_relation_filter('category', 'category__id', lookup_expr='exact', filter_class=NumberFilter)
 ProductFilter.add_relation_filter('category__name', 'category__name')
-ProductFilter.add_relation_filter('sku', 'sku')
+ProductFilter.add_relation_filter('serial_number', 'serial_number')
 
 class InventoryViewSet(
     mixins.ListModelMixin, mixins.DestroyModelMixin, viewsets.GenericViewSet, mixins.CreateModelMixin,
@@ -435,8 +435,8 @@ class InventoryViewSet(
         filters.OrderingFilter
     ]
     filterset_class = ProductFilter
-    search_fields = ['name', 'category_name', 'sku']
-    ordering_fields = ['date_created', 'last_updated', 'name', 'category_name', 'sku']
+    search_fields = ['name', 'category_name', 'serial_number']
+    ordering_fields = ['date_created', 'last_updated', 'name', 'category_name', 'serial_number']
     ordering = ['-date_created']  # Default ordering
     pagination_class = CustomPagination
 

@@ -177,7 +177,7 @@ class SanusiBusinessCreateSerializer(serializers.Serializer):
 class InventorySerializer(serializers.ModelSerializer):
     class Meta:
         model = Product
-        fields = ["id", "name", "business", "category", "sku", "description", "price", "stock_quantity", "image", "bundle"]
+        fields = ["id", "name", "business", "category", "serial_number", "description", "price", "stock_quantity", "image", "bundle"]
         read_only_fields = ["id","business"]  # Prevent user from manually setting it
 
 
