@@ -7,7 +7,7 @@ class MessageSerializer(serializers.ModelSerializer):
         model = Message
         fields = [
             "business",
-            "message_id",
+            "id",
             "message_content",
             "sanusi_response",
             "sender_email",
@@ -22,7 +22,6 @@ class AllMessagesSerializer(serializers.ModelSerializer):
         model = Message
         fields = [
             "id",
-            "message_id",
             "message_content",
             "sanusi_response",
             "sender_email",

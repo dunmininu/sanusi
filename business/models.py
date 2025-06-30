@@ -25,9 +25,9 @@ def get_delivery_date():
 
 class Business(BaseModel):
     # Unique identifier for the business
-    company_id = models.UUIDField(
-        default=uuid.uuid4, unique=True, db_index=True, primary_key=True
-    )
+    # company_id = models.UUIDField(
+    #     default=uuid.uuid4, unique=True, db_index=True, primary_key=True
+    # )
 
     # Business name
     name = models.CharField(max_length=200, db_index=True)
@@ -79,9 +79,9 @@ class Business(BaseModel):
 
 class Subscription(BaseModel):
     # Unique identifier for the subscription
-    subscription_id = models.UUIDField(
-        default=uuid.uuid4, unique=True, db_index=True, primary_key=True
-    )
+    # subscription_id = models.UUIDField(
+    #     default=uuid.uuid4, unique=True, db_index=True, primary_key=True
+    # )
 
     # Reference to the associated business
     business = models.OneToOneField(
@@ -112,9 +112,9 @@ class Subscription(BaseModel):
 
 
 class EscalationDepartment(BaseModel):
-    id = models.UUIDField(
-        default=uuid.uuid4, unique=True, db_index=True, primary_key=True
-    )
+    # id = models.UUIDField(
+    #     default=uuid.uuid4, unique=True, db_index=True, primary_key=True
+    # )
     name = models.CharField(max_length=50)
     business = models.ForeignKey(
         Business, on_delete=models.CASCADE, related_name="escalation_departments",
@@ -125,9 +125,9 @@ class KnowledgeBase(BaseModel):
     business = models.ForeignKey(
         Business, on_delete=models.CASCADE, related_name="business_kb", db_index=True
     )
-    knowledgebase_id = models.UUIDField(
-        default=uuid.uuid4, unique=True, db_index=True, primary_key=True
-    )
+    # knowledgebase_id = models.UUIDField(
+    #     default=uuid.uuid4, unique=True, db_index=True, primary_key=True
+    # )
     title = models.CharField(max_length=125)
     content = models.CharField(max_length=512)
     cleaned_data = models.JSONField(default=dict)
@@ -135,18 +135,18 @@ class KnowledgeBase(BaseModel):
 
 
 class Reply(BaseModel):
-    id = models.UUIDField(
-        default=uuid.uuid4, unique=True, db_index=True, primary_key=True
-    )
+    # id = models.UUIDField(
+    #     default=uuid.uuid4, unique=True, db_index=True, primary_key=True
+    # )
     reply = models.TextField()
     to_be_escalated = models.BooleanField()
     sentiment = models.CharField(max_length=20)
 
 
 class Category(BaseModel):
-    id = models.UUIDField(
-        default=uuid.uuid4, unique=True, db_index=True, primary_key=True
-    )
+    # id = models.UUIDField(
+    #     default=uuid.uuid4, unique=True, db_index=True, primary_key=True
+    # )
     name = models.CharField(max_length=100)
     business = models.ForeignKey(
         Business, on_delete=models.CASCADE, related_name="category", db_index=True
@@ -157,9 +157,9 @@ class Category(BaseModel):
 
 
 class Product(BaseModel):
-    id = models.UUIDField(
-        default=uuid.uuid4, unique=True, db_index=True, primary_key=True
-    )
+    # id = models.UUIDField(
+    #     default=uuid.uuid4, unique=True, db_index=True, primary_key=True
+    # )
     category = models.ForeignKey(Category, on_delete=models.CASCADE, related_name='products', db_index=True)
     name = models.CharField(max_length=200)
     sku = models.CharField(max_length=200, unique=True)
@@ -205,9 +205,9 @@ class Product(BaseModel):
 
 
 class Inventory(BaseModel):
-    id = models.UUIDField(
-        default=uuid.uuid4, unique=True, db_index=True, primary_key=True
-    )
+    # id = models.UUIDField(
+    #     default=uuid.uuid4, unique=True, db_index=True, primary_key=True
+    # )
     product = models.ForeignKey(Product, on_delete=models.CASCADE)
     quantity = models.PositiveIntegerField()
     timestamp = models.DateTimeField(auto_now_add=True)
@@ -223,9 +223,9 @@ class Order(BaseModel):
         (SHIPPED, SHIPPED), (DELIVERED, DELIVERED)
     )
 
-    id = models.UUIDField(
-        default=uuid.uuid4, unique=True, db_index=True, primary_key=True
-    )
+    # id = models.UUIDField(
+    #     default=uuid.uuid4, unique=True, db_index=True, primary_key=True
+    # )
     order_id = models.CharField(max_length=20, unique=True, null=False, blank=True)
     delivery_info = models.JSONField()
     payment_summary = models.JSONField()
@@ -328,9 +328,9 @@ class Order(BaseModel):
     #Order.objects.filter(...).aggregate(Max('order_id'))   # O(1)
 
 class OrderProduct(BaseModel):
-    id = models.UUIDField(
-        default=uuid.uuid4, unique=True, db_index=True, primary_key=True
-    )
+    # id = models.UUIDField(
+    #     default=uuid.uuid4, unique=True, db_index=True, primary_key=True
+    # )
     product = models.ForeignKey(Product, on_delete=models.CASCADE)
     quantity = models.PositiveIntegerField()
     price = models.DecimalField(max_digits=10, decimal_places=2)

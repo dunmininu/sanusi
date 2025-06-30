@@ -172,14 +172,14 @@ class CustomerViewSet(
             # Set success attributes using the current span
             if current_span:
                 current_span.set_attributes({
-                    "customer.id": str(serializer.instance.customer_id),
+                    "customer.id": str(serializer.instance.id),
                     "operation.success": True
                 })
                 
             # Log success
             loggeru.info(
                 "Customer created successfully",
-                customer_id=str(serializer.instance.customer_id),
+                customer_id=str(serializer.instance.id),
                 user_id=str(request.user.id)
             )
 
@@ -224,14 +224,14 @@ class CustomerViewSet(
                 # Set success attributes using the current span
             if current_span:
                 current_span.set_attributes({
-                    "customer.id": str(serializer.instance.customer_id),
+                    "customer.id": str(serializer.instance.id),
                     "operation.success": True
                 })
                 
             # Log success
             loggeru.info(
                 "Customer update successfully",
-                customer_id=str(serializer.instance.customer_id),
+                customer_id=str(serializer.instance.id),
                 user_id=str(request.user.id)
             )
             return Response(serializer.data)
@@ -274,7 +274,7 @@ class ChatViewSet(viewsets.GenericViewSet):
         customer_email = serializer.validated_data.get("customer_email", "")
         phone_number = serializer.validated_data.get("phone_number", "")
 
-        business = get_object_or_404(Business, company_id=business_id)
+        business = get_object_or_404(Business, id=business_id)
 
         customer = Customer(
             name=customer_name, email=customer_email, phone_number=phone_number
@@ -286,7 +286,7 @@ class ChatViewSet(viewsets.GenericViewSet):
         chat.save()
 
         chat_serializer = ChatSerializer(chat)
-        company_id = str(chat.business.company_id)
+        company_id = str(chat.business.id)
 
         return Response(
             {
@@ -303,7 +303,7 @@ class ChatViewSet(viewsets.GenericViewSet):
         url_path="(?P<business_id>[^/.]+)/(?P<chat_identifier>[^/.]+)/delete-chat",
     )
     def delete_chat(self, request, business_id, chat_identifier):
-        business = get_object_or_404(Business, company_id=business_id)
+        business = get_object_or_404(Business, id=business_id)
         chat = get_object_or_404(Chat, business=business, identifier=chat_identifier)
         chat.delete()
         return Response(data=status.HTTP_200_OK)
@@ -315,7 +315,7 @@ class ChatViewSet(viewsets.GenericViewSet):
     )
     @swagger_auto_schema(request_body=no_body)
     def end_chat(self, request, business_id, chat_identifier):
-        business = get_object_or_404(Business, company_id=business_id)
+        business = get_object_or_404(Business, id=business_id)
         chat = get_object_or_404(Chat, business=business, identifier=chat_identifier)
         chat.status = ChatStatus.RESOLVED
         chat.end_time = timezone.now()
@@ -331,7 +331,7 @@ class ChatViewSet(viewsets.GenericViewSet):
     )
     def send_message(self, request, business_id, chat_identifier):
         serializer = MessageSerializer(data=request.data)
-        business = get_object_or_404(Business, company_id=business_id)
+        business = get_object_or_404(Business, id=business_id)
         chat = get_object_or_404(
             Chat,
             business=business,
@@ -354,7 +354,7 @@ class ChatViewSet(viewsets.GenericViewSet):
     def bulk_toggle_chat_status(self, request, business_id):
         serializer = IdsSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        business = get_object_or_404(Business, company_id=business_id)
+        business = get_object_or_404(Business, id=business_id)
         chat_ids = serializer.validated_data["ids"]
 
         # Retrieve chats with the given identifiers and update their status
@@ -377,7 +377,7 @@ class ChatViewSet(viewsets.GenericViewSet):
     )
     def get_messages(self, request, business_id, chat_identifier):
         try:
-            business = get_object_or_404(Business, company_id=business_id)
+            business = get_object_or_404(Business, id=business_id)
         except Http404:
             raise Http404("Business not found")
 
@@ -409,7 +409,7 @@ class ChatViewSet(viewsets.GenericViewSet):
         responses={200: ChatListDetailSerializer(many=True)},
     )
     def get_all_chats(self, request, business_id):
-        business = get_object_or_404(Business, company_id=business_id)
+        business = get_object_or_404(Business, id=business_id)
         chats = Chat.objects.filter(business=business).order_by("-id")
 
         # Apply search filter based on search_fields from parent class
@@ -431,7 +431,7 @@ class ChatViewSet(viewsets.GenericViewSet):
     @swagger_auto_schema(request_body=no_body)
     def toggle_chat_status(self, request, business_id, chat_identifier):
         try:
-            business = get_object_or_404(Business, company_id=business_id)
+            business = get_object_or_404(Business, id=business_id)
         except Http404:
             raise Http404("Business not found")
 
@@ -460,7 +460,7 @@ class ChatViewSet(viewsets.GenericViewSet):
     )
     def toggle_sanusi(self, request, business_id, chat_identifier):
         try:
-            business = get_object_or_404(Business, company_id=business_id)
+            business = get_object_or_404(Business, id=business_id)
         except Http404:
             raise Http404("Business not found")
 
@@ -492,7 +492,7 @@ class ChatViewSet(viewsets.GenericViewSet):
     @transaction.atomic
     def auto_response(self, request, business_id, chat_identifier):
         # Deserialize and validate request data
-        business = get_object_or_404(Business, company_id=business_id)
+        business = get_object_or_404(Business, id=business_id)
         serializer = AutoResponseSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
@@ -1172,7 +1172,7 @@ class ChatViewSet(viewsets.GenericViewSet):
     )
     @transaction.atomic
     def read_or_unread(self, request, business_id, chat_identifier):
-        business = get_object_or_404(Business, company_id=business_id)
+        business = get_object_or_404(Business, id=business_id)
         chat = get_object_or_404(Chat, business=business, identifier=chat_identifier)
 
         if chat.read:
@@ -1194,7 +1194,7 @@ class ChatViewSet(viewsets.GenericViewSet):
         """
         shows all the chats that are currently escalated
         """
-        business = get_object_or_404(Business, company_id=business_id)
+        business = get_object_or_404(Business, id=business_id)
         chats = Chat.objects.filter(business=business, escalated=True)
 
         serializer = ChatListDetailSerializer(chats, many=True)
@@ -1209,7 +1209,7 @@ def create_chat(request):
         phone_number = json.loads(request.body)["phone_number"]
         company_id = json.loads(request.body)["company_id"]
 
-        business = get_object_or_404(Business, company_id=company_id)
+        business = get_object_or_404(Business, id=company_id)
 
         customer = Customer(
             name=customer_name, email=customer_email, phone_number=phone_number
@@ -1222,7 +1222,7 @@ def create_chat(request):
                 "success": True,
                 "chat_identifier": chat.identifier,
                 "customer_identifier": chat.customer.identifier,
-                "business_id": chat.business.company_id,
+                "business_id": chat.business.id,
             }
         )
     else:
@@ -1326,7 +1326,7 @@ def auto_response(request):
         channel = data["channel"]
 
         if company_id:
-            business = get_object_or_404(Business, company_id=company_id)
+            business = get_object_or_404(Business, id=company_id)
             try:
                 knowledge_base = business.business_kb.first()
                 instructions = knowledge_base.reply_instructions
@@ -1343,7 +1343,7 @@ def auto_response(request):
 
         if message_id:
             try:
-                previous_message = sanusi_message.objects.get(message_id=message_id)
+                previous_message = sanusi_message.objects.get(id=message_id)
                 conversation_id = previous_message.conversation_id
             except sanusi_message.DoesNotExist:
                 return Response("Message not found")
@@ -1384,7 +1384,7 @@ def auto_response(request):
 
         sanusi_message.objects.create(
             business=business,
-            message_id=message_id,
+            id=message_id,
             conversation_id=conversation_id,
             message_content=message,
             sanusi_response=answer,

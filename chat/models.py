@@ -25,9 +25,9 @@ class ChannelChoices(models.TextChoices):
 
 class Customer(BaseModel):
     # Unique identifier for the subscription
-    customer_id = models.UUIDField(
-        default=uuid.uuid4, unique=True, db_index=True, primary_key=True
-    )
+    # customer_id = models.UUIDField(
+    #     default=uuid.uuid4, unique=True, db_index=True, primary_key=True
+    # )
     business = models.ForeignKey(
         'business.Business', on_delete=models.CASCADE, related_name="customer",
     )
@@ -50,9 +50,9 @@ class Customer(BaseModel):
 
 
 class Chat(BaseModel):
-    id = models.UUIDField(
-        default=uuid.uuid4, unique=True, db_index=True, primary_key=True
-    )
+    # id = models.UUIDField(
+    #     default=uuid.uuid4, unique=True, db_index=True, primary_key=True
+    # )
     customer = models.ForeignKey(
         Customer,
         on_delete=models.CASCADE,
@@ -101,9 +101,9 @@ class SENDER_CHOICES(models.TextChoices):
 
 
 class Message(BaseModel):
-    id = models.UUIDField(
-        default=uuid.uuid4, unique=True, db_index=True, primary_key=True
-    )
+    # id = models.UUIDField(
+    #     default=uuid.uuid4, unique=True, db_index=True, primary_key=True
+    # )
     chat = models.ForeignKey(Chat, on_delete=models.CASCADE, related_name="messages")
     sender = models.CharField(
         max_length=256,
