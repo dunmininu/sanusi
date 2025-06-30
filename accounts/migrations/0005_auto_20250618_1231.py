@@ -21,6 +21,6 @@ class Migration(migrations.Migration):
             ALTER TABLE accounts_user_businesses ALTER COLUMN user_id TYPE uuid 
             USING user_id::text::uuid;
             """,
-            reverse_sql="ALTER TABLE accounts_user_businesses ALTER COLUMN user_id TYPE bigint;"
+            reverse_sql="ALTER TABLE accounts_user_businesses ALTER COLUMN user_id TYPE bigint;",
         ),
     ]

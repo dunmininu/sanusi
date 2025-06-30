@@ -97,9 +97,7 @@ class Migration(migrations.Migration):
                 ("stock_quantity", models.PositiveIntegerField()),
                 (
                     "image",
-                    models.ImageField(
-                        blank=True, null=True, upload_to="product_images/"
-                    ),
+                    models.ImageField(blank=True, null=True, upload_to="product_images/"),
                 ),
                 (
                     "category",

@@ -1,4 +1,4 @@
-from django.urls import path, include
+from django.urls import path
 
 from .views import (
     SanusiMessageChannelViewSet,
@@ -9,12 +9,12 @@ from .views import (
 
 urlpatterns = [
     path(
-        "jarvis-message/",
+        "message/",
         SanusiMessageChannelViewSet.as_view(),
-        name="jarvis_message_channel",
+        name="_message_channel",
     ),
     path(
-        "get-one-jarvis-message-session/<str:message_id>/",
+        "get-one-message-session/<str:message_id>/",
         get_single_chat_session,
         name="get_single_chat_session",
     ),

@@ -1,6 +1,8 @@
 from django.db import models
 import uuid
 from sanusi_backend.classes.base_model import BaseModel
+
+
 # Create your models here.
 class Lead(BaseModel):
     # id = models.UUIDField(

@@ -138,4 +138,9 @@ erl_crash.dump
 .DS_Store
 frontend/.DS_Store
 
+# Ruff cache
+.ruff_cache/
+
 logs/
+__pycache__/
+**/__pycache__/

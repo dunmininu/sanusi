@@ -11,9 +11,7 @@ class EscalationDepartment(models.Model):
 
 
 class KnowledgeBase(models.Model):
-    knowledgebase_id = models.CharField(
-        max_length=72, blank=True, null=True, unique=True
-    )
+    knowledgebase_id = models.CharField(max_length=72, blank=True, null=True, unique=True)
     title = models.CharField(max_length=125)
     content = models.CharField(max_length=512)
     cleaned_data = models.JSONField(default=dict)

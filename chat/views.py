@@ -64,10 +64,18 @@ from sanusi.utils import (
     try_parse_json,
 )
 
-from sanusi_backend.classes.custom import  CustomPagination, BaseSearchFilter
+from sanusi_backend.classes.custom import CustomPagination, BaseSearchFilter
 
 
-instructions_for_auto_response = "Return your response as each of these parameters in a JSON format. Json format should be {'response': '[Generated response based on the information provided]',set escalation_department to 'none' if escalate Issue is false 'escalate Issue : boolean, 'escalation_department': '[sales/operations/billing/engineering]', 'severity': '[low/medium/high]','sentiment': '[positive/negative/neutral]'}."
+instructions_for_auto_response = """Return your response as each of these parameters 
+in a JSON format. Json format should be {'response': 
+'[Generated response based on the information provided]',
+set escalation_department to 'none' 
+if escalate Issue is false 'escalate Issue : boolean, '
+escalation_department': '[sales/operations/billing/engineering]', 
+'severity': '[low/medium/high]',
+'sentiment': '[positive/negative/neutral]'}.
+"""
 
 logger = logging.getLogger(__name__)
 
@@ -90,32 +98,36 @@ chat_context_instructions = json_data["chat_context_instructions"]
 valid_channels = ["chat", "whatsapp", "telegram", "instagram", "tiktok"]
 
 
-
 class CustomerFilter(BaseSearchFilter):
     class Meta(BaseSearchFilter.Meta):
         model = Customer
-        fields = BaseSearchFilter.Meta.fields + ['email', 'phone_number']
+        fields = BaseSearchFilter.Meta.fields + ["email", "phone_number"]
         # fields = ['phone']  # Only include phone field
 
+
 # Add custom filters for Customer
-CustomerFilter.add_relation_filter('phone_number', 'phone_number')
-CustomerFilter.add_relation_filter('email', 'email')
+CustomerFilter.add_relation_filter("phone_number", "phone_number")
+CustomerFilter.add_relation_filter("email", "email")
+
 
 class CustomerViewSet(
-    mixins.ListModelMixin, mixins.DestroyModelMixin, viewsets.GenericViewSet, mixins.CreateModelMixin,
+    mixins.ListModelMixin,
+    mixins.DestroyModelMixin,
+    viewsets.GenericViewSet,
+    mixins.CreateModelMixin,
     mixins.UpdateModelMixin,
 ):
     serializer_class = CustomerSerializer
-    permission_classes = [IsAuthenticated] 
+    permission_classes = [IsAuthenticated]
     filter_backends = [
         django_filters.rest_framework.DjangoFilterBackend,
         filters.SearchFilter,
-        filters.OrderingFilter
+        filters.OrderingFilter,
     ]
     filterset_class = CustomerFilter
-    search_fields = ['name', 'email', 'phone_number']
-    ordering_fields = ['date_created', 'last_updated', 'name', 'email']
-    ordering = ['-date_created']  # Default ordering
+    search_fields = ["name", "email", "phone_number"]
+    ordering_fields = ["date_created", "last_updated", "name", "email"]
+    ordering = ["-date_created"]  # Default ordering
     pagination_class = CustomPagination
     queryset = Customer.objects.all()
 
@@ -129,11 +141,12 @@ class CustomerViewSet(
     def list(self, request, *args, **kwargs):
         """
         List customers with filtering and pagination
-        
+
         Query Parameters:
         - name: Filter by name (case-insensitive partial match)
         - email: Filter by email (case-insensitive partial match)
-        - date_created_after: Filter customers created after this date (YYYY-MM-DD or YYYY-MM-DD HH:MM:SS)
+        - date_created_after: Filter customers created after this date 
+            (YYYY-MM-DD or YYYY-MM-DD HH:MM:SS)
         - date_created_before: Filter customers created before this date
         - last_updated_after: Filter customers updated after this date
         - last_updated_before: Filter customers updated before this date
@@ -141,7 +154,7 @@ class CustomerViewSet(
         - ordering: Order by field (prefix with - for descending)
         - page: Page number
         - page_size: Number of items per page (max 100)
-        
+
         Examples:
         /customers/?name=john&email=gmail
         /customers/?date_created_after=2023-01-01&date_created_before=2023-12-31
@@ -154,15 +167,18 @@ class CustomerViewSet(
     def create(self, request, *args, current_span=None, **kwargs):
         try:
             # Log sensitive data carefully - avoid logging passwords, tokens, etc.
-            safe_data = {k: v for k, v in request.data.items() 
-                if k not in ['password', 'token', 'secret', 'key', 'access', 'refresh']}
+            safe_data = {
+                k: v
+                for k, v in request.data.items()
+                if k not in ["password", "token", "secret", "key", "access", "refresh"]
+            }
 
             # Log request start
             loggeru.info(
                 "Creating customer",
                 user_id=str(request.user.id),
                 user_email=request.user.email,
-                data_keys=list(safe_data.keys())
+                data_keys=list(safe_data.keys()),
             )
 
             serializer = self.get_serializer(data=request.data)
@@ -183,7 +199,6 @@ class CustomerViewSet(
                 user_id=str(request.user.id)
             )
 
-
             headers = self.get_success_headers(serializer.data)
             return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
         except Exception as e:
@@ -196,24 +211,27 @@ class CustomerViewSet(
                 log_level="critical",
                 extra_data={
                     "exception_type": type(e).__name__,
-                    "user_id": str(request.user.id)
-                }
+                    "user_id": str(request.user.id),
+                },
             )
-    
+
     @transaction.atomic
     @with_telemetry(span_name="update_customer")
     def update(self, request, *args, current_span=None, **kwargs):
         try:
             # Log sensitive data carefully - avoid logging passwords, tokens, etc.
-            safe_data = {k: v for k, v in request.data.items() 
-                           if k not in ['password', 'token', 'secret', 'key', 'access', 'refresh']}
+            safe_data = {
+                k: v
+                for k, v in request.data.items()
+                if k not in ["password", "token", "secret", "key", "access", "refresh"]
+            }
 
             # Log request start
             loggeru.info(
                 "update customer",
                 user_id=str(request.user.id),
                 user_email=request.user.email,
-                data_keys=list(safe_data.keys())
+                data_keys=list(safe_data.keys()),
             )
             partial = kwargs.pop("partial", False)
             instance = self.get_object()
@@ -221,7 +239,7 @@ class CustomerViewSet(
             serializer.is_valid(raise_exception=True)
             self.perform_update(serializer)
 
-                # Set success attributes using the current span
+            # Set success attributes using the current span
             if current_span:
                 current_span.set_attributes({
                     "customer.id": str(serializer.instance.id),
@@ -245,12 +263,9 @@ class CustomerViewSet(
                 log_level="critical",
                 extra_data={
                     "exception_type": type(e).__name__,
-                    "user_id": str(request.user.id)
-                }
+                    "user_id": str(request.user.id),
+                },
             )
-
-
-
 
 
 class ChatViewSet(viewsets.GenericViewSet):
@@ -382,9 +397,7 @@ class ChatViewSet(viewsets.GenericViewSet):
             raise Http404("Business not found")
 
         try:
-            chat = get_object_or_404(
-                Chat, business=business, identifier=chat_identifier
-            )
+            chat = get_object_or_404(Chat, business=business, identifier=chat_identifier)
         except Http404:
             raise Http404("Chat not found")
         messages = chat.messages.all()
@@ -436,9 +449,7 @@ class ChatViewSet(viewsets.GenericViewSet):
             raise Http404("Business not found")
 
         try:
-            chat = get_object_or_404(
-                Chat, business=business, identifier=chat_identifier
-            )
+            chat = get_object_or_404(Chat, business=business, identifier=chat_identifier)
         except Http404:
             raise Http404("Chat not found")
 
@@ -465,9 +476,7 @@ class ChatViewSet(viewsets.GenericViewSet):
             raise Http404("Business not found")
 
         try:
-            chat = get_object_or_404(
-                Chat, business=business, identifier=chat_identifier
-            )
+            chat = get_object_or_404(Chat, business=business, identifier=chat_identifier)
         except Http404:
             raise Http404("Chat not found")
 
@@ -525,9 +534,7 @@ class ChatViewSet(viewsets.GenericViewSet):
             )
 
         else:
-            chat = get_object_or_404(
-                Chat, business_id=business, identifier=chat_identifier
-            )
+            chat = get_object_or_404(Chat, business_id=business, identifier=chat_identifier)
 
         # Retrieve knowledge bases and instructions for the business
         knowledge_bases = business.business_kb.all()
@@ -605,9 +612,7 @@ class ChatViewSet(viewsets.GenericViewSet):
                 },
                 {"role": "user", "content": f"{message}"},
             ]
-            answer_4_response = generate_response_chat(
-                response_instructions_prompt, 300
-            )
+            answer_4_response = generate_response_chat(response_instructions_prompt, 300)
 
             escalation_department_prompt = [
                 {
@@ -648,9 +653,7 @@ class ChatViewSet(viewsets.GenericViewSet):
             ]
             answer_4_severity = generate_response_chat(severity_instructions_prompt, 1)
 
-            severity = (
-                answer_4_severity["choices"][0]["message"]["content"].lower().strip()
-            )
+            severity = answer_4_severity["choices"][0]["message"]["content"].lower().strip()
             if severity not in ["low", "medium", "high"]:
                 severity = "low"  # default to 'low' if invalid response
 
@@ -664,9 +667,7 @@ class ChatViewSet(viewsets.GenericViewSet):
                     "content": f"Chat to be analysed: ('sanusi previous responses': {sanusi_response_str}), ('the user messages': {content_str}), ('user's current message': {message})",
                 },
             ]
-            answer_4_chat_context = generate_response_chat(
-                chat_context_instructions_prompt, 1
-            )
+            answer_4_chat_context = generate_response_chat(chat_context_instructions_prompt, 1)
 
             text = answer_4_response["choices"][0]["message"]["content"]
             html_text = html.escape(text)  # This will escape the text
@@ -692,18 +693,14 @@ class ChatViewSet(viewsets.GenericViewSet):
                 ]["content"],
                 "severity": severity,
                 "sentiment": answer_4_sentiment["choices"][0]["message"]["content"],
-                "chat_context": answer_4_chat_context["choices"][0]["message"][
-                    "content"
-                ],
+                "chat_context": answer_4_chat_context["choices"][0]["message"]["content"],
             }
             save_chat_and_message(chat, sender, message, response_json, channel)
             return Response(response_json, status=status.HTTP_200_OK)
 
         if channel == "email_v2":
             prompt.insert(0, f"Reply instructions: {email_v1_instructions}")
-            prompt.insert(
-                1, f"knowledge base to answer based off: {knowledge_base_contents}"
-            )
+            prompt.insert(1, f"knowledge base to answer based off: {knowledge_base_contents}")
             prompt.insert(
                 2,
                 f"User's previous messages for reflection: {last_message.content if last_message else ''}",
@@ -737,9 +734,7 @@ class ChatViewSet(viewsets.GenericViewSet):
                             response_json,
                             "-----------this is after value error for email_v1---------------------",
                         )
-                        save_chat_and_message(
-                            chat, sender, message, response_json, channel
-                        )
+                        save_chat_and_message(chat, sender, message, response_json, channel)
                         return Response(response_json, status=status.HTTP_200_OK)
                     except (json.JSONDecodeError, ValueError, AttributeError) as e:
                         if attempt < max_retry_attempts - 1:  # not the last attempt
@@ -762,9 +757,7 @@ class ChatViewSet(viewsets.GenericViewSet):
                             save_chat_and_message(
                                 chat, sender, message, response_json, channel
                             )
-                            return Response(
-                                data=response_json, status=status.HTTP_200_OK
-                            )
+                            return Response(data=response_json, status=status.HTTP_200_OK)
 
             # chat.channel = channel
             # chat.save()
@@ -790,9 +783,7 @@ class ChatViewSet(viewsets.GenericViewSet):
 
                 response_json = {
                     "response": response_parts[0] if len(response_parts) > 0 else None,
-                    "escalate_issue": (
-                        response_parts[1] if len(response_parts) > 1 else None
-                    ),
+                    "escalate_issue": (response_parts[1] if len(response_parts) > 1 else None),
                     "escalation_department": (
                         response_parts[2] if len(response_parts) > 2 else None
                     ),
@@ -865,10 +856,7 @@ class ChatViewSet(viewsets.GenericViewSet):
             print(which_knowledge_base_res)
 
             # if the category is inventory then trigger the invenotry thought process logic
-            if (
-                which_knowledge_base_res["choices"][0]["message"]["content"]
-                == "inventory"
-            ):
+            if which_knowledge_base_res["choices"][0]["message"]["content"] == "inventory":
                 which_category = [
                     {
                         "role": "system",
@@ -876,9 +864,9 @@ class ChatViewSet(viewsets.GenericViewSet):
                     },
                     {"role": "user", "content": f"{message}"},
                 ]
-                probable_category = generate_response_chat(which_category, 50)[
-                    "choices"
-                ][0]["message"]["content"]
+                probable_category = generate_response_chat(which_category, 50)["choices"][0][
+                    "message"
+                ]["content"]
                 print(probable_category)
 
                 # get the keywords and entities from the analysis nlp mmodule
@@ -940,9 +928,7 @@ class ChatViewSet(viewsets.GenericViewSet):
                 #     "content"
                 # ]
 
-                probable_products = get_matching_products(
-                    kw_and_ents, probable_category
-                )
+                probable_products = get_matching_products(kw_and_ents, probable_category)
 
                 # If there's more than one matching product, use OpenAI for further narrowing down.
                 if len(probable_products) > 1:
@@ -968,9 +954,7 @@ class ChatViewSet(viewsets.GenericViewSet):
                 },
                 {"role": "user", "content": f"{message}"},
             ]
-            answer_4_response = generate_response_chat(
-                response_instructions_prompt, 300
-            )
+            answer_4_response = generate_response_chat(response_instructions_prompt, 300)
 
             escalation_department_prompt = [
                 {
@@ -1009,9 +993,7 @@ class ChatViewSet(viewsets.GenericViewSet):
                 },
             ]
             answer_4_severity = generate_response_chat(severity_instructions_prompt, 1)
-            severity = (
-                answer_4_severity["choices"][0]["message"]["content"].lower().strip()
-            )
+            severity = answer_4_severity["choices"][0]["message"]["content"].lower().strip()
             if severity not in ["low", "medium", "high"]:
                 severity = "low"  # default to 'low' if invalid response
 
@@ -1025,9 +1007,7 @@ class ChatViewSet(viewsets.GenericViewSet):
                     "content": f"Chat to be analysed: ('sanusi previous responses': {sanusi_response_str}), ('the user messages': {content_str}), ('user's current message': {message})",
                 },
             ]
-            answer_4_chat_context = generate_response_chat(
-                chat_context_instructions_prompt, 5
-            )
+            answer_4_chat_context = generate_response_chat(chat_context_instructions_prompt, 5)
             response_json = {
                 "response": answer_4_response["choices"][0]["message"]["content"],
                 "escalate_issue": (
@@ -1043,21 +1023,20 @@ class ChatViewSet(viewsets.GenericViewSet):
                 ]["content"],
                 "severity": severity,
                 "sentiment": answer_4_sentiment["choices"][0]["message"]["content"],
-                "chat_context": answer_4_chat_context["choices"][0]["message"][
-                    "content"
-                ],
+                "chat_context": answer_4_chat_context["choices"][0]["message"]["content"],
             }
             save_chat_and_message(chat, sender, message, response_json, channel)
             return Response(response_json, status=status.HTTP_200_OK)
 
         elif channel == "chat_v1":
             prompt.insert(0, f"Reply instructions: {chat_v1_instructions}")
-            prompt.insert(
-                1, f"knowledge base to answer based off: {knowledge_base_contents}"
-            )
+            prompt.insert(1, f"knowledge base to answer based off: {knowledge_base_contents}")
             prompt.insert(
                 2,
-                f"User's previous message for reflection: {last_message.content if last_message else ' '}",
+                f"""
+                User's previous message for 
+                reflection: {last_message.content if last_message else ' '}
+                """,
             )
             prompt.insert(
                 3,
@@ -1091,14 +1070,14 @@ class ChatViewSet(viewsets.GenericViewSet):
                 except ValueError:
                     try:
                         try:
-                            response_content = re.search(
-                                r"Response: (.*?)\r\n", answer
-                            ).group(1)
+                            response_content = re.search(r"Response: (.*?)\r\n", answer).group(
+                                1
+                            )
                         except AttributeError:
                             response_json = parse_response_data(answer)
                             print(
                                 response_json,
-                                "-----------this is after value error for email_v1---------------------",
+                                "-----------this is after value error for email_v1-----------",
                             )
                             save_chat_and_message(
                                 chat, sender, message, response_json, channel
@@ -1112,9 +1091,9 @@ class ChatViewSet(viewsets.GenericViewSet):
                         AttributeError,
                     ):
                         if attempt < max_retry_attempts - 1:  # not the last attempt
-                            prompt[
-                                0
-                            ] += "\nRemember to adhere strictly to the response type instructions provided. An assistant is supposed to listen to instructions"
+                            prompt[0] += """\nRemember to adhere strictly to the response type 
+                            instructions provided. An assistant is 
+                            supposed to listen to instructions"""
                         else:
                             logger.error("retrying attempt %d", attempt)
                             continue
@@ -1151,15 +1130,24 @@ class ChatViewSet(viewsets.GenericViewSet):
 
         if channel == "email":
             prompt = [
-                f"You are Sanusi's smart assistant that assists with writing professional emails like grammarly, Make sure to avoid mentioning that you are an AI language model. Please regenerate/rewrite the following text into a grammatically correct and formal email body like <p>[your response]</p>: {content}.",
+                f"""You are Sanusi's smart assistant that assists with writing professional 
+                emails like grammarly, Make sure to avoid mentioning that 
+                you are an AI language model. Please regenerate/rewrite the 
+                following text into a grammatically correct and formal email body 
+                like <p>[your response]</p>: {content}.""",
                 # {
                 #     "role": "assistant",
-                #     "content": f"Please restructure the following content to have a formal HTML email format like <p>[your response]</p>.: {content}",
+                #     "content": f"Please restructure the following content to have a formal
+                # HTML email format like <p>[your response]</p>.: {content}",
                 # },
             ]
         elif channel == "chat":
             prompt = [
-                f"You are Sanusi's smart assistant that assists with editing text and puts it in a friendly way like grammarly, Make sure to avoid mentioning that you are an AI language model. Please regenerate/rewrite the following text into a grammatically correct one: {content}.",
+                f"""You are Sanusi's smart assistant that assists with 
+                editing text and puts it in a friendly way like grammarly, 
+                Make sure to avoid mentioning that you are an AI language model. Please 
+                regenerate/rewrite the following text into a 
+                grammatically correct one: {content}.""",
             ]
         new_text = generate_response_email(prompt)
         return Response(data=new_text["choices"][0]["text"])
@@ -1242,20 +1230,20 @@ def end_chat(request, chat_id):
 
 
 # terminate_chat
-@require_http_methods(["POST"])
-def toggle_chat_status(request, chat_id):
-    try:
-        chat_object = Chat.objects.get(id=chat_id)
-        if chat_object.is_active == True:
-            chat_object.is_active = False
-        else:
-            chat_object.is_active = True
-        chat_object.save()
-        return JsonResponse(
-            {"success": True, "message": "Chat terminated successfully."}
-        )
-    except Chat.DoesNotExist:
-        return JsonResponse({"success": False, "message": "Chat not found."})
+# @require_http_methods(["POST"])
+# def toggle_chat_status(request, chat_id):
+#     try:
+#         chat_object = Chat.objects.get(id=chat_id)
+#         if chat_object.is_active == True:
+#             chat_object.is_active = False
+#         else:
+#             chat_object.is_active = True
+#         chat_object.save()
+#         return JsonResponse(
+#             {"success": True, "message": "Chat terminated successfully."}
+#         )
+#     except Chat.DoesNotExist:
+#         return JsonResponse({"success": False, "message": "Chat not found."})
 
 
 # bulk toggle chat status
@@ -1265,9 +1253,7 @@ def bulk_toggle_status(request):
     try:
         # use bulk update to set is_active to False for multiple Chat objects
         Chat.objects.filter(id__in=chat_ids).update(is_active=False)
-        return JsonResponse(
-            {"success": True, "message": "Chats terminated successfully."}
-        )
+        return JsonResponse({"success": True, "message": "Chats terminated successfully."})
     except Chat.DoesNotExist:
         return JsonResponse({"success": False, "message": "Chats not found."})
 
@@ -1295,9 +1281,7 @@ def get_messages(request, chat_id):
     chat = get_object_or_404(Chat, id=chat_id)
     messages = chat.messages.all().values("sender", "content", "sent_time")
     sanusi_messages = chat.sanusi_messages.all().values("sanusi_response")
-    return JsonResponse(
-        {"messages": list(messages), "sanusi_messages": sanusi_messages}
-    )
+    return JsonResponse({"messages": list(messages), "sanusi_messages": sanusi_messages})
 
 
 def get_active_chats(request):
@@ -1329,10 +1313,11 @@ def auto_response(request):
             business = get_object_or_404(Business, id=company_id)
             try:
                 knowledge_base = business.business_kb.first()
-                instructions = knowledge_base.reply_instructions
+                # instructions = knowledge_base.reply_instructions # check for usage later
             except AttributeError:
                 return Response(
-                    "This business has no knowledge, kindly create one to activate auto response"
+                    "This business has no knowledge, kindly create one "
+                    "to activate auto response"
                 )
             escalation_departments = ", ".join(
                 [dept.name for dept in business.escalation_departments.all()]
@@ -1353,7 +1338,9 @@ def auto_response(request):
         prompt = [
             {
                 "role": "assistant",
-                "content": f"Knowledge base: {knowledge_base.content} Instructions: {instructions_for_auto_response} Departments: {escalation_departments} Q: {message}\nA:",
+                "content": f"Knowledge base: {knowledge_base.content} Instructions: "
+                f"{instructions_for_auto_response} Departments: {escalation_departments} "
+                f"Q: {message}\nA:",
             },
             {
                 "role": "user",
@@ -1361,13 +1348,13 @@ def auto_response(request):
             },
             {
                 "role": "assistant",
-                "content": f"Please provide the appropriate escalation department and the sentiment of the message. Format: 'Department: <department>, Sentiment: <sentiment>'",
+                "content": "Please provide the appropriate escalation department and"
+                " the sentiment of the message. Format: 'Department: <department>, "
+                "Sentiment: <sentiment>'",
             },
         ]
 
-        response_content = generate_response_chat(
-            prompt, conversation_id=conversation_id
-        )
+        response_content = generate_response_chat(prompt, conversation_id=conversation_id)
         response_lines = response_content.choices[0].text.strip().split("\n")
 
         answer = response_lines[0]
