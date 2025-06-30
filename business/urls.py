@@ -11,7 +11,7 @@ router.register(
     basename="knowledge-base",
 )
 router.register(r"sanusi-business", SanusiBusinessViewSet, basename="sanusi_business")
-router.register(r"inventory/(?P<company_id>[^/]+)/customers", InventoryViewSet, basename="inventory")
-router.register(r"category/(?P<company_id>[^/]+)/customers", CategoryViewSet, basename="category")
-router.register(r"order/(?P<company_id>[^/]+)", OrderViewSet, basename="order")
+router.register(r"(?P<company_id>[^/]+)/inventory", InventoryViewSet, basename="inventory")
+router.register(r"(?P<company_id>[^/]+)/category", CategoryViewSet, basename="category")
+router.register(r"(?P<company_id>[^/]+)/order", OrderViewSet, basename="order")
 

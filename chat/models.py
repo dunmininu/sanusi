@@ -22,6 +22,15 @@ class ChannelChoices(models.TextChoices):
     TELEGRAM = ("telegram", "Business Telegram channel")
     TWITTER = ("twitter", "Business Twitter channel")
 
+class PlatformChoices(models.TextChoices):
+    INSTAGRAM = "INSTAGRAM", "Instagram"
+    FACEBOOK = "FACEBOOK", "Facebook"
+    WHATSAPP = "WHATSAPP", "WhatsApp"
+    TELEGRAM = "TELEGRAM", "Telegram"
+    X_TWITTER = "X", "X (Twitter)"
+    TIKTOK = "TIKTOK", "TikTok"
+    SHOP = "SHOP", "Shop"
+
 
 class Customer(BaseModel):
     # Unique identifier for the subscription
@@ -34,7 +43,7 @@ class Customer(BaseModel):
     name = models.CharField(max_length=256)
     email = models.EmailField(null=True, blank=True)
     phone_number = models.CharField(max_length=20, null=True, blank=True)
-    platform = models.CharField(max_length=256, null=True, blank=True)
+    platform = models.CharField(max_length=256, null=True, blank=True, choices=PlatformChoices.choices)
     identifier = models.CharField(max_length=256, null=True, blank=True, unique=True)
     
 

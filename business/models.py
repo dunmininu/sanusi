@@ -1,4 +1,6 @@
 import uuid
+import random
+import string
 from datetime import datetime, timedelta
 from django.db import models
 from django.core.validators import MinValueValidator
@@ -174,6 +176,23 @@ class Product(BaseModel):
 
     def __str__(self):
         return self.name
+    
+
+    def generate_serial_number(self):
+        def segment(length=3):
+            return ''.join(random.choices(string.ascii_uppercase, k=length))
+
+        # Get first 3 uppercase alphanumeric characters of business and product name
+        biz_part = ''.join(filter(str.isalnum, self.business.name.upper()))[:3]
+        prod_part = ''.join(filter(str.isalnum, self.name.upper()))[:4]
+
+        return f"SN-{biz_part}-{prod_part}-{segment()}-{segment()}-{random.randint(1, 99):02d}"
+    
+    def save(self, *args, **kwargs):
+        if not self.serial_number or self.serial_number.strip() == "":
+            self.serial_number = self.generate_serial_number()
+        super().save(*args, **kwargs)
+
     
     def add_to_bundle(self, item, quantity=1):
         """Add an item to the bundle"""

@@ -174,7 +174,35 @@ class SanusiBusinessCreateSerializer(serializers.Serializer):
     escalation_departments = serializers.ListField(required=False, allow_null=True)
 
 
+class CategorySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Category
+        fields = ["id", "name", "business"]
+        read_only_fields = ["id","business"]  # Prevent user from manually setting it
+    
+    def create(self, validated_data):
+        request = self.context.get("request")
+        user = request.user
+        default_business = user.get_default_business()
+        if not default_business:
+            ErrorHandler.validation_error(
+                message="User does not have a business.",
+                field="business_id", 
+                error_code="NO_DEFAULT_BUSINESS",
+                extra_data={"user_id": user.id}
+            )
+      
+        category = Category(**validated_data)
+        category.business = default_business
+        category.save()
+        
+        return category
+
+
+
 class InventorySerializer(serializers.ModelSerializer):
+    category = CategorySerializer(read_only=True)
+    business = BusinessSerializer(read_only=True)
     class Meta:
         model = Product
         fields = ["id", "name", "business", "category", "serial_number", "description", "price", "stock_quantity", "image", "bundle"]
@@ -258,29 +286,6 @@ class InventorySerializer(serializers.ModelSerializer):
         return instance
     
 
-class CategorySerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Category
-        fields = ["id", "name", "business"]
-        read_only_fields = ["id","business"]  # Prevent user from manually setting it
-    
-    def create(self, validated_data):
-        request = self.context.get("request")
-        user = request.user
-        default_business = user.get_default_business()
-        if not default_business:
-            ErrorHandler.validation_error(
-                message="User does not have a business.",
-                field="business_id", 
-                error_code="NO_DEFAULT_BUSINESS",
-                extra_data={"user_id": user.id}
-            )
-      
-        category = Category(**validated_data)
-        category.business = default_business
-        category.save()
-        
-        return category
 
 
 
