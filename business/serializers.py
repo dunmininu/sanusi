@@ -42,7 +42,10 @@ class KnowledgeBaseSerializer(serializers.ModelSerializer):
         prompt = [
             {
                 "role": "system",
-                "content": "Clean this data into a reusable json content that openai chat can understand and use for response processing later not more than 512 characters",
+                "content": (
+                    "Clean this data into a reusable json content that openai chat can understand "
+                    "and use for response processing later not more than 512 characters"
+                ),
             },
             {
                 "role": "user",
@@ -210,11 +213,25 @@ class InventorySerializer(serializers.ModelSerializer):
     category = CategorySerializer(read_only=True)
     business = BusinessSerializer(read_only=True)
     category_id = serializers.PrimaryKeyRelatedField(
-        queryset=Category.objects.all(), write_only=True, source="category"
-    )# For POST/PUT
+        queryset=Category.objects.all(),
+        write_only=True,
+        source="category",
+    )  # For POST/PUT
     class Meta:
         model = Product
-        fields = ["id", "name", "business", "category", "serial_number", "description", "price", "stock_quantity", "image", "bundle", "category_id"]
+        fields = [
+            "id",
+            "name",
+            "business",
+            "category",
+            "serial_number",
+            "description",
+            "price",
+            "stock_quantity",
+            "image",
+            "bundle",
+            "category_id",
+        ]
         read_only_fields = ["id","business"]  # Prevent user from manually setting it
 
 
@@ -263,8 +280,7 @@ class InventorySerializer(serializers.ModelSerializer):
         return product
 
     def update(self, instance, validated_data):
-        request = self.context.get("request")
-        user = request.user
+        self.context.get("request")
         bundles_data = validated_data.pop("bundles", None)
         price_data = validated_data.get("price")
 
@@ -309,8 +325,22 @@ class OrderProductSerializer(serializers.ModelSerializer):
 class CustomeSerializer(serializers.ModelSerializer):
     class Meta:
         model = Customer
-        fields = ["id", "name", "email", "phone_number", "platform", "identifier", "business", "date_created"]
-        read_only_fields = ["id","identifier", "business", "date_created"]  # Prevent user from manually setting it
+        fields = [
+            "id",
+            "name",
+            "email",
+            "phone_number",
+            "platform",
+            "identifier",
+            "business",
+            "date_created",
+        ]
+        read_only_fields = [
+            "id",
+            "identifier",
+            "business",
+            "date_created",
+        ]  # Prevent user from manually setting it
 
 class OrderSerializer(serializers.ModelSerializer):
     order_products = OrderProductSerializer(
@@ -373,7 +403,10 @@ class OrderSerializer(serializers.ModelSerializer):
             # Check if there's enough inventory
             if product.stock_quantity < stock_quantity:
                 ErrorHandler.validation_error(
-                    message=f"Insufficient inventory for product '{product.name}'. Available: {product.stock_quantity}, Requested: {stock_quantity}",
+                    message=(
+                        f"Insufficient inventory for product '{product.name}'. Available: "
+                        f"{product.stock_quantity}, Requested: {stock_quantity}"
+                    ),
                     field="stock_quantity",
                     error_code="INSUFFICIENT_INVENTORY",
                     extra_data={
@@ -467,7 +500,7 @@ class OrderSerializer(serializers.ModelSerializer):
         # Create order products and update inventory
         try:
             for i, product_data in enumerate(order_products_data):
-                product_id = product_data.get("product_id")
+                product_data.get("product_id")
                 quantity = product_data.get("quantity")
                 price = product_data.get("price")
                 meta = product_data.get("meta", {})
@@ -608,7 +641,7 @@ class OrderSerializer(serializers.ModelSerializer):
                 )
 
                 for i, product_data in enumerate(order_products_data):
-                    product_id = product_data.get("product_id")
+                    product_data.get("product_id")
                     quantity = product_data.get("quantity")
                     price = product_data.get("price")
                     meta = product_data.get("meta", {})
@@ -671,11 +704,18 @@ class OrderSerializer(serializers.ModelSerializer):
     #             message="Customer not found or doesn't belong to this business.",
     #             field="customer_id",
     #             error_code="INVALID_CUSTOMER",
-    #             extra_data={"customer_id": customer_id, "business_id": default_business}
+    #             extra_data={
+    #                 "customer_id": customer_id,
+    #                 "business_id": default_business,
+    #             }
     #         )
 
     #     # Create order
-    #     order = Order.objects.create(customer=customer, business=default_business, **validated_data)
+    #     order = Order.objects.create(
+    #         customer=customer,
+    #         business=default_business,
+    #         **validated_data,
+    #     )
 
     #     # Create order products
     #     for product_data in order_products_data:
@@ -726,13 +766,19 @@ class OrderSerializer(serializers.ModelSerializer):
     #     default_business = user.get_default_business()
 
     #     # Extract nested data
-    #     order_products_data = validated_data.pop("order_products_data", None)
+    #     order_products_data = validated_data.pop(
+    #         "order_products_data",
+    #         None,
+    #     )
     #     customer_id = validated_data.pop("customer_id", None)
 
     #     # Update customer if provided
     #     if customer_id:
     #         try:
-    #             customer = Customer.objects.get(customer_id=customer_id, business=default_business)
+    #             customer = Customer.objects.get(
+    #                 customer_id=customer_id,
+    #                 business=default_business,
+    #             )
     #             instance.customer = customer
     #         except Customer.DoesNotExist:
     #             ErrorHandler.validation_error(

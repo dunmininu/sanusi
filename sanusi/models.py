@@ -1,6 +1,5 @@
 from django.db import models
 from chat.models import Chat
-import uuid
 from sanusi_backend.classes.base_model import BaseModel
 
 

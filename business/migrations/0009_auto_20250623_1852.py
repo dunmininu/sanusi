@@ -24,18 +24,18 @@ class Migration(migrations.Migration):
         ),
         # Step 2: Remove the old foreign key constraint
         migrations.RunSQL(
-            "ALTER TABLE business_product DROP CONSTRAINT IF EXISTS business_product_category_id_fkey;",
+            "ALTER TABLE business_product DROP CONSTRAINT IF EXISTS business_product_category_id_fkey;",  # noqa: E501
             reverse_sql=migrations.RunSQL.noop,
         ),
         # Step 3: Change column type to UUID
         migrations.RunSQL(
-            "ALTER TABLE business_product ALTER COLUMN category_id TYPE UUID USING category_id::text::uuid;",
-            reverse_sql="ALTER TABLE business_product ALTER COLUMN category_id TYPE bigint USING category_id::text::bigint;",
+            "ALTER TABLE business_product ALTER COLUMN category_id TYPE UUID USING category_id::text::uuid;",  # noqa: E501
+            reverse_sql="ALTER TABLE business_product ALTER COLUMN category_id TYPE bigint USING category_id::text::bigint;",  # noqa: E501
         ),
         # Step 4: Re-add foreign key constraint
         migrations.RunSQL(
-            "ALTER TABLE business_product ADD CONSTRAINT business_product_category_id_fkey FOREIGN KEY (category_id) REFERENCES business_category(id) DEFERRABLE INITIALLY DEFERRED;",
-            reverse_sql="ALTER TABLE business_product DROP CONSTRAINT business_product_category_id_fkey;",
+            "ALTER TABLE business_product ADD CONSTRAINT business_product_category_id_fkey FOREIGN KEY (category_id) REFERENCES business_category(id) DEFERRABLE INITIALLY DEFERRED;",  # noqa: E501
+            reverse_sql="ALTER TABLE business_product DROP CONSTRAINT business_product_category_id_fkey;",  # noqa: E501
         ),
         # Step 5: Make category field non-nullable again
         migrations.AlterField(

@@ -1,7 +1,6 @@
 import uuid
 from django.db import models
 from django.contrib.postgres.fields import ArrayField
-from business.models import Business
 from sanusi_backend.classes.base_model import BaseModel
 
 # from business.models import Business
@@ -46,7 +45,12 @@ class Customer(BaseModel):
     name = models.CharField(max_length=256)
     email = models.EmailField(null=True, blank=True)
     phone_number = models.CharField(max_length=20, null=True, blank=True)
-    platform = models.CharField(max_length=256, null=True, blank=True, choices=PlatformChoices.choices)
+    platform = models.CharField(
+        max_length=256,
+        null=True,
+        blank=True,
+        choices=PlatformChoices.choices,
+    )
     identifier = models.CharField(max_length=256, null=True, blank=True, unique=True)
 
     def generate_identifier(self):

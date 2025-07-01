@@ -1,4 +1,3 @@
-import uuid
 import random
 import string
 from datetime import datetime, timedelta
@@ -167,7 +166,12 @@ class Product(BaseModel):
     # id = models.UUIDField(
     #     default=uuid.uuid4, unique=True, db_index=True, primary_key=True
     # )
-    category = models.ForeignKey(Category, on_delete=models.CASCADE, related_name='products', db_index=True)
+    category = models.ForeignKey(
+        Category,
+        on_delete=models.CASCADE,
+        related_name="products",
+        db_index=True,
+    )
     name = models.CharField(max_length=200)
     serial_number = models.CharField(max_length=200, db_index=True, null=True, blank=True)
     description = models.TextField(blank=True)
@@ -230,7 +234,10 @@ class Product(BaseModel):
     
     class Meta:
         constraints = [
-            models.UniqueConstraint(fields=['business', 'serial_number'], name='unique_serial_per_business')
+            models.UniqueConstraint(
+                fields=["business", "serial_number"],
+                name="unique_serial_per_business",
+            )
         ]
 
 

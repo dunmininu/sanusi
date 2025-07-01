@@ -7,15 +7,14 @@ from django.db.models import Case, When
 from loguru import logger
 
 
-from rest_framework import viewsets, status
+from rest_framework import mixins, filters, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.exceptions import ValidationError
 from rest_framework.permissions import IsAuthenticated
-from rest_framework import status, viewsets, generics, mixins, filters
 from drf_yasg.utils import swagger_auto_schema, no_body
 from drf_yasg import openapi
-from django_filters import FilterSet, NumberFilter
+from django_filters import NumberFilter
 import django_filters
 
 from sanusi_backend.decorators.telemetry import with_telemetry
@@ -27,7 +26,6 @@ from .serializers import (
     BulkCreateKnowledgeBaseSerializer,
     BusinessSerializer,
     KnowledgeBaseBulkUpdateSerializer,
-    KnowledgeBaseDeleteSerializer,
     KnowledgeBaseSerializer,
     SanusiBusinessCreateSerializer,
     InventorySerializer,
@@ -398,7 +396,12 @@ class ProductFilter(BaseSearchFilter):
         fields = BaseSearchFilter.Meta.fields + ['category', 'category__name', 'serial_number']
 
 # Add custom relation filters
-ProductFilter.add_relation_filter('category', 'category__id', lookup_expr='exact', filter_class=NumberFilter)
+ProductFilter.add_relation_filter(
+    'category',
+    'category__id',
+    lookup_expr='exact',
+    filter_class=NumberFilter,
+)
 # ProductFilter.add_relation_filter('category__name', 'category__name')
 ProductFilter.add_relation_filter('serial_number', 'serial_number')
 
@@ -448,7 +451,9 @@ class InventoryViewSet(
         Query Parameters:
         - name: Filter by name (case-insensitive partial match)
         - email: Filter by email (case-insensitive partial match)
-        - date_created_after: Filter products created after this date (YYYY-MM-DD or YYYY-MM-DD HH:MM:SS)
+        - date_created_after: Filter products created after this date (
+            YYYY-MM-DD or YYYY-MM-DD HH:MM:SS
+        )
         - date_created_before: Filter products created before this date
         - last_updated_after: Filter products updated after this date
         - last_updated_before: Filter products updated before this date
@@ -626,7 +631,9 @@ class CategoryViewSet(
 
         Query Parameters:
         - name: Filter by name (case-insensitive partial match)
-        - date_created_after: Filter categories created after this date (YYYY-MM-DD or YYYY-MM-DD HH:MM:SS)
+        - date_created_after: Filter categories created after this date (
+            YYYY-MM-DD or YYYY-MM-DD HH:MM:SS
+        )
         - date_created_before: Filter categories created before this date
         - last_updated_after: Filter categories updated after this date
         - last_updated_before: Filter categories updated before this date
@@ -819,7 +826,9 @@ class OrderViewSet(
         - order_id: Filter by order ID (exact match)
         - status: Filter by status
         - platform: Filter by platform
-        - date_created_after: Filter orders created after this date (YYYY-MM-DD or YYYY-MM-DD HH:MM:SS)
+        - date_created_after: Filter orders created after this date (
+            YYYY-MM-DD or YYYY-MM-DD HH:MM:SS
+        )
         - date_created_before: Filter orders created before this date
         - last_updated_after: Filter orders updated after this date
         - last_updated_before: Filter orders updated before this date
