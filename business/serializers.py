@@ -209,9 +209,12 @@ class CategorySerializer(serializers.ModelSerializer):
 class InventorySerializer(serializers.ModelSerializer):
     category = CategorySerializer(read_only=True)
     business = BusinessSerializer(read_only=True)
+    category_id = serializers.PrimaryKeyRelatedField(
+        queryset=Category.objects.all(), write_only=True, source="category"
+    )# For POST/PUT
     class Meta:
         model = Product
-        fields = ["id", "name", "business", "category", "serial_number", "description", "price", "stock_quantity", "image", "bundle"]
+        fields = ["id", "name", "business", "category", "serial_number", "description", "price", "stock_quantity", "image", "bundle", "category_id"]
         read_only_fields = ["id","business"]  # Prevent user from manually setting it
 
 
