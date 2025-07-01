@@ -18,9 +18,9 @@ class Message(BaseModel):
         null=True,
         blank=True,
     )
-    message_id = models.UUIDField(
-        default=uuid.uuid4, unique=True, db_index=True, primary_key=True
-    )
+    # message_id = models.UUIDField(
+    #     default=uuid.uuid4, unique=True, db_index=True, primary_key=True
+    # )
     message_content = models.TextField()
     sanusi_response = models.TextField(blank=True, null=True)
     sender_email = models.EmailField(max_length=30)

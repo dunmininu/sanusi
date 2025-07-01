@@ -13,28 +13,14 @@ class CreateChatRequestSerializer(serializers.Serializer):
 class CustomerSerializer(serializers.ModelSerializer):
     class Meta:
         model = Customer
-        fields = [
-            "customer_id",
-            "name",
-            "email",
-            "phone_number",
-            "platform",
-            "identifier",
-            "business",
-            "date_created",
-        ]
-        read_only_fields = [
-            "customer_id",
-            "identifier",
-            "business",
-            "date_created",
-        ]  # Prevent user from manually setting it
-
+        fields = ["id", "name", "email", "phone_number", "platform", "identifier", "business", "date_created"]
+        read_only_fields = ["id","identifier", "business", "date_created"]  # Prevent user from manually setting it
+   
     def create(self, validated_data):
         request = self.context.get("request")
         user = request.user
         company_id = self.context["view"].kwargs.get("company_id")
-        if not company_id or not Business.objects.filter(company_id=company_id).exists():
+        if not company_id or not Business.objects.filter(id=company_id).exists():
             ErrorHandler.validation_error(
                 message="Valid Company ID required",
                 field="company_id",
@@ -43,7 +29,7 @@ class CustomerSerializer(serializers.ModelSerializer):
             )
 
         try:
-            business = user.businesses.get(company_id=company_id)
+            business = user.businesses.get(id=company_id)
         except Business.DoesNotExist:
             ErrorHandler.validation_error(
                 message="Invalid business for current user.",
@@ -61,7 +47,7 @@ class CustomerSerializer(serializers.ModelSerializer):
         request = self.context.get("request")
         user = request.user
         company_id = self.context["view"].kwargs.get("company_id")
-        if not company_id or not Business.objects.filter(company_id=company_id).exists():
+        if not company_id or not Business.objects.filter(id=company_id).exists():
             ErrorHandler.validation_error(
                 message="Valid Company ID required",
                 field="company_id",
@@ -69,8 +55,8 @@ class CustomerSerializer(serializers.ModelSerializer):
                 extra_data={"provided_id": company_id},
             )
         try:
-            business = user.businesses.get(company_id=company_id)
-            company_id == business.company_id
+            business = user.businesses.get(id=company_id)
+            company_id == business.id
         except Business.DoesNotExist:
             ErrorHandler.validation_error(
                 message="Invalid business for current user.",

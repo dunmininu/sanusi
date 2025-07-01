@@ -289,7 +289,7 @@ class SanusiMessageChannelViewSet(mixins.CreateModelMixin, generics.GenericAPIVi
         instructions = data.get("instructions")
 
         try:
-            message_obj = Message.objects.get(message_id=data["message_id"])
+            message_obj = Message.objects.get(id=data["message_id"])
             if not knowledge_base_prompt and message_obj:
                 knowledge_base = message_obj.business.business_kb.first()
                 prompt = [
@@ -350,7 +350,7 @@ class SanusiMessageChannelViewSet(mixins.CreateModelMixin, generics.GenericAPIVi
         else:
             Message.objects.create(
                 business_id=business_id,
-                message_id=data["message_id"],
+                id=data["message_id"],
                 message_content=message,
                 sanusi_response=chat_session[-1]["content"],
                 sender_email="",
@@ -367,7 +367,7 @@ class SanusiMessageChannelViewSet(mixins.CreateModelMixin, generics.GenericAPIVi
 @api_view(["GET"])
 def get_single_chat_session(request, message_id):
     try:
-        message_obj = Message.objects.get(message_id=message_id)
+        message_obj = Message.objects.get(id=message_id)
     except Message.DoesNotExist:
         return Response({"message": "Message not found"}, status=status.HTTP_404_NOT_FOUND)
     serializer = MessageSerializer(message_obj)

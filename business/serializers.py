@@ -24,7 +24,7 @@ class KnowledgeBaseSerializer(serializers.ModelSerializer):
         fields = [
             "title",
             "content",
-            "knowledgebase_id",
+            "id",
             "is_company_description",
             "cleaned_data",
         ]
@@ -37,7 +37,7 @@ class KnowledgeBaseSerializer(serializers.ModelSerializer):
         is_company_description = validated_data["is_company_description"]
         company_id = self.context.get("company_id")
 
-        business = get_object_or_404(Business, company_id=company_id)
+        business = get_object_or_404(Business, id=company_id)
 
         prompt = [
             {
@@ -60,7 +60,7 @@ class KnowledgeBaseSerializer(serializers.ModelSerializer):
         kb = KnowledgeBase.objects.create(
             title=title,
             content=content,
-            knowledgebase_id=knowledgebase_id,
+            id=knowledgebase_id,
             is_company_description=is_company_description,
             cleaned_data=cleaned_data,
             business=business,
@@ -104,12 +104,12 @@ class BusinessSerializer(serializers.ModelSerializer):
         model = Business
         fields = [
             "name",
-            "company_id",
+            "id",
             "escalation_departments",
             "reply_instructions",
             "knowledge_base",
         ]
-        read_only_fields = ["company_id"]
+        read_only_fields = ["id"]
 
     def get_knowledge_base(self, business):
         knowledge_base = KnowledgeBase.objects.filter(
@@ -124,13 +124,13 @@ class BusinessSerializer(serializers.ModelSerializer):
         # Check if company_id is provided
         company_id = data.get("company_id")
         # Check if company_id already exists
-        if Business.objects.filter(company_id=company_id).exists():
+        if Business.objects.filter(id=company_id).exists():
             ErrorHandler.validation_error(
-                message="Company ID already exists",
-                field="company_id",
-                error_code="INVALID_COMPANY_ID",
-                extra_data={"provided_id": data["company_id"]},
-            )
+                    message="Company ID already exists",
+                    field="id", 
+                    error_code="INVALID_COMPANY_ID",
+                    extra_data={"provided_id": data["company_id"]}
+                )
         return data
 
     def create(self, validated_data):
@@ -180,22 +180,43 @@ class SanusiBusinessCreateSerializer(serializers.Serializer):
     escalation_departments = serializers.ListField(required=False, allow_null=True)
 
 
+class CategorySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Category
+        fields = ["id", "name", "business"]
+        read_only_fields = ["id","business"]  # Prevent user from manually setting it
+    
+    def create(self, validated_data):
+        request = self.context.get("request")
+        user = request.user
+        default_business = user.get_default_business()
+        if not default_business:
+            ErrorHandler.validation_error(
+                message="User does not have a business.",
+                field="business_id", 
+                error_code="NO_DEFAULT_BUSINESS",
+                extra_data={"user_id": user.id}
+            )
+      
+        category = Category(**validated_data)
+        category.business = default_business
+        category.save()
+        
+        return category
+
+
+
 class InventorySerializer(serializers.ModelSerializer):
+    category = CategorySerializer(read_only=True)
+    business = BusinessSerializer(read_only=True)
+    category_id = serializers.PrimaryKeyRelatedField(
+        queryset=Category.objects.all(), write_only=True, source="category"
+    )# For POST/PUT
     class Meta:
         model = Product
-        fields = [
-            "id",
-            "name",
-            "business",
-            "category",
-            "sku",
-            "description",
-            "price",
-            "stock_quantity",
-            "image",
-            "bundle",
-        ]
-        read_only_fields = ["id", "business"]  # Prevent user from manually setting it
+        fields = ["id", "name", "business", "category", "serial_number", "description", "price", "stock_quantity", "image", "bundle", "category_id"]
+        read_only_fields = ["id","business"]  # Prevent user from manually setting it
+
 
     def create(self, validated_data):
         request = self.context.get("request")
@@ -273,29 +294,6 @@ class InventorySerializer(serializers.ModelSerializer):
         return instance
 
 
-class CategorySerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Category
-        fields = ["id", "name", "business"]
-        read_only_fields = ["id", "business"]  # Prevent user from manually setting it
-
-    def create(self, validated_data):
-        request = self.context.get("request")
-        user = request.user
-        default_business = user.get_default_business()
-        if not default_business:
-            ErrorHandler.validation_error(
-                message="User does not have a business.",
-                field="business_id",
-                error_code="NO_DEFAULT_BUSINESS",
-                extra_data={"user_id": user.id},
-            )
-
-        category = Category(**validated_data)
-        category.business = default_business
-        category.save()
-
-        return category
 
 
 class OrderProductSerializer(serializers.ModelSerializer):
@@ -311,23 +309,8 @@ class OrderProductSerializer(serializers.ModelSerializer):
 class CustomeSerializer(serializers.ModelSerializer):
     class Meta:
         model = Customer
-        fields = [
-            "customer_id",
-            "name",
-            "email",
-            "phone_number",
-            "platform",
-            "identifier",
-            "business",
-            "date_created",
-        ]
-        read_only_fields = [
-            "customer_id",
-            "identifier",
-            "business",
-            "date_created",
-        ]  # Prevent user from manually setting it
-
+        fields = ["id", "name", "email", "phone_number", "platform", "identifier", "business", "date_created"]
+        read_only_fields = ["id","identifier", "business", "date_created"]  # Prevent user from manually setting it
 
 class OrderSerializer(serializers.ModelSerializer):
     order_products = OrderProductSerializer(
@@ -459,7 +442,7 @@ class OrderSerializer(serializers.ModelSerializer):
 
         # Validate customer belongs to business
         try:
-            customer = Customer.objects.get(customer_id=customer_id, business=default_business)
+            customer = Customer.objects.get(id=customer_id, business=default_business)
         except Customer.DoesNotExist:
             ErrorHandler.validation_error(
                 message="Customer not found or doesn't belong to this business.",
@@ -550,9 +533,8 @@ class OrderSerializer(serializers.ModelSerializer):
         # Update customer if provided
         if customer_id:
             try:
-                customer = Customer.objects.get(
-                    customer_id=customer_id, business=default_business
-                )
+                customer = Customer.objects.get(id=customer_id, business=default_business)
+
                 instance.customer = customer
             except Customer.DoesNotExist:
                 ErrorHandler.validation_error(

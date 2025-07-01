@@ -44,7 +44,7 @@ class BusinessApiViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
 
     def get_object(self):
-        return get_object_or_404(Business, company_id=self.kwargs.get("company_id"))
+        return get_object_or_404(Business, id=self.kwargs.get("company_id"))
 
     @transaction.atomic
     @with_telemetry(span_name="create_business")
@@ -70,18 +70,16 @@ class BusinessApiViewSet(viewsets.ModelViewSet):
 
             # Set success attributes using the current span
             if current_span:
-                current_span.set_attributes(
-                    {
-                        "business.id": str(serializer.instance.company_id),
-                        "operation.success": True,
-                    }
-                )
-
+                current_span.set_attributes({
+                    "business.id": str(serializer.instance.id),
+                    "operation.success": True
+                })
+                
             # Log success
             logger.info(
                 "Business created successfully",
-                business_id=str(serializer.instance.company_id),
-                user_id=str(request.user.id),
+                business_id=str(serializer.instance.id),
+                user_id=str(request.user.id)
             )
 
             headers = self.get_success_headers(serializer.data)
@@ -149,18 +147,16 @@ class BusinessApiViewSet(viewsets.ModelViewSet):
 
             # Set success attributes using the current span
             if current_span:
-                current_span.set_attributes(
-                    {
-                        "business.id": str(serializer.instance.company_id),
-                        "operation.success": True,
-                    }
-                )
-
+                current_span.set_attributes({
+                    "business.id": str(serializer.instance.id),
+                    "operation.success": True
+                })
+                
             # Log success
             logger.info(
                 "Business update successfully",
-                business_id=str(serializer.instance.company_id),
-                user_id=str(request.user.id),
+                business_id=str(serializer.instance.id),
+                user_id=str(request.user.id)
             )
             return Response(serializer.data)
         except Exception as e:
@@ -216,12 +212,12 @@ class KnowledgeBaseViewSet(
             return KnowledgeBase.objects.none()
 
         business_id = self.kwargs.get("company_id")
-        business = get_object_or_404(Business, company_id=business_id)
+        business = get_object_or_404(Business, id=business_id)
         return business.business_kb.all()
 
     def get_object(self):
         queryset = self.get_queryset()
-        filter_kwargs = {"knowledgebase_id": self.kwargs["knowledgebase_id"]}
+        filter_kwargs = {"id": self.kwargs["knowledgebase_id"]}
         obj = get_object_or_404(queryset, **filter_kwargs)
         self.check_object_permissions(self.request, obj)
         return obj
@@ -229,7 +225,7 @@ class KnowledgeBaseViewSet(
     def get_serializer_context(self):
         context = super().get_serializer_context()
         if not getattr(self, "swagger_fake_view", False):
-            context["company_id"] = self.kwargs["company_id"]
+            context["id"] = self.kwargs["company_id"]
         return context
 
     @transaction.atomic
@@ -238,7 +234,7 @@ class KnowledgeBaseViewSet(
         Create a single knowledge base for the specified business.
         """
         business_id = self.kwargs.get("company_id")
-        business = get_object_or_404(Business, company_id=business_id)
+        business = get_object_or_404(Business, id=business_id)
         if not business:
             raise ValidationError("Business does not exist")
         serializer = self.get_serializer(data=request.data)
@@ -286,7 +282,7 @@ class KnowledgeBaseViewSet(
     )
     def bulk_create(self, request, *args, **kwargs):
         business_id = self.kwargs.get("company_id")
-        business = Business.objects.get(company_id=business_id)
+        business = Business.objects.get(id=business_id)
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         serializer.save(business=business)
@@ -316,7 +312,7 @@ class KnowledgeBaseViewSet(
         # Validate if all knowledgebase_id exist
         for kb_id in knowledgebase_ids:
             try:
-                KnowledgeBase.objects.get(knowledgebase_id=kb_id)
+                KnowledgeBase.objects.get(id=kb_id)
             except ObjectDoesNotExist:
                 raise ValidationError(f"The knowledgebase_id {kb_id} does not exist.")
 
@@ -330,7 +326,7 @@ class KnowledgeBaseViewSet(
             for knowledgebase_id, value in knowledgebase_updates.items()
         ]
 
-        KnowledgeBase.objects.filter(knowledgebase_id__in=knowledgebase_ids).update(
+        KnowledgeBase.objects.filter(id__in=knowledgebase_ids).update(
             title=Case(*whens_title, output_field=models.CharField()),
             content=Case(*whens_content, output_field=models.TextField()),
         )
@@ -354,11 +350,11 @@ class SanusiBusinessViewSet(mixins.CreateModelMixin, viewsets.GenericViewSet):
         token_input = f"{company_id}-{business_name}"
         token = hashlib.sha256(token_input.encode("utf-8")).hexdigest()
 
-        validated_company_id = Business.objects.filter(company_id=company_id).exists()
+        validated_company_id = Business.objects.filter(id=company_id).exists()
         if not validated_company_id:
             # Create Business instance
             business = Business.objects.create(
-                company_id=company_id,
+                id=company_id,
                 name=business_name,
                 token=token,
                 reply_instructions=instructions,
@@ -388,7 +384,7 @@ class SanusiBusinessViewSet(mixins.CreateModelMixin, viewsets.GenericViewSet):
         EscalationDepartment.objects.bulk_create(department_instances)
 
         response_data = {
-            "company_id": company_id,
+            "id": company_id,
             "business_name": business_name,
             "token": token,
         }
@@ -399,15 +395,12 @@ class SanusiBusinessViewSet(mixins.CreateModelMixin, viewsets.GenericViewSet):
 class ProductFilter(BaseSearchFilter):
     class Meta(BaseSearchFilter.Meta):
         model = Product
-        fields = BaseSearchFilter.Meta.fields + ["category", "category__name", "sku"]
-
+        fields = BaseSearchFilter.Meta.fields + ['category', 'category__name', 'serial_number']
 
 # Add custom relation filters
-ProductFilter.add_relation_filter(
-    "category", "category__id", lookup_expr="exact", filter_class=NumberFilter
-)
-ProductFilter.add_relation_filter("category__name", "category__name")
-ProductFilter.add_relation_filter("sku", "sku")
+ProductFilter.add_relation_filter('category', 'category__id', lookup_expr='exact', filter_class=NumberFilter)
+# ProductFilter.add_relation_filter('category__name', 'category__name')
+ProductFilter.add_relation_filter('serial_number', 'serial_number')
 
 
 class InventoryViewSet(
@@ -437,9 +430,9 @@ class InventoryViewSet(
         filters.OrderingFilter,
     ]
     filterset_class = ProductFilter
-    search_fields = ["name", "category_name", "sku"]
-    ordering_fields = ["date_created", "last_updated", "name", "category_name", "sku"]
-    ordering = ["-date_created"]  # Default ordering
+    search_fields = ['name', 'serial_number']
+    ordering_fields = ['date_created', 'last_updated', 'name', 'serial_number']
+    ordering = ['-date_created']  # Default ordering
     pagination_class = CustomPagination
 
     def get_queryset(self):
