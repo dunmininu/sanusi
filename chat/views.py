@@ -1,5 +1,4 @@
 import ast
-import html
 import json
 import logging
 import re
@@ -30,6 +29,7 @@ from sanusi_backend.utils.error_handler import ErrorHandler, LogicException
 from sanusi.analysis.entity_recognition import extract_topics
 
 from .models import Chat, ChatStatus, Message, Customer
+from .services import AutoResponseService
 from .serializers import (
     AutoResponseSerializer,
     ChatListDetailSerializer,
@@ -137,7 +137,7 @@ class CustomerViewSet(
         Query Parameters:
         - name: Filter by name (case-insensitive partial match)
         - email: Filter by email (case-insensitive partial match)
-        - date_created_after: Filter customers created after this date 
+        - date_created_after: Filter customers created after this date
             (YYYY-MM-DD or YYYY-MM-DD HH:MM:SS)
         - date_created_before: Filter customers created before this date
         - last_updated_after: Filter customers updated after this date
@@ -179,16 +179,15 @@ class CustomerViewSet(
 
             # Set success attributes using the current span
             if current_span:
-                current_span.set_attributes({
-                    "customer.id": str(serializer.instance.id),
-                    "operation.success": True
-                })
-                
+                current_span.set_attributes(
+                    {"customer.id": str(serializer.instance.id), "operation.success": True}
+                )
+
             # Log success
             loggeru.info(
                 "Customer created successfully",
                 customer_id=str(serializer.instance.id),
-                user_id=str(request.user.id)
+                user_id=str(request.user.id),
             )
 
             headers = self.get_success_headers(serializer.data)
@@ -233,16 +232,15 @@ class CustomerViewSet(
 
             # Set success attributes using the current span
             if current_span:
-                current_span.set_attributes({
-                    "customer.id": str(serializer.instance.id),
-                    "operation.success": True
-                })
-                
+                current_span.set_attributes(
+                    {"customer.id": str(serializer.instance.id), "operation.success": True}
+                )
+
             # Log success
             loggeru.info(
                 "Customer update successfully",
                 customer_id=str(serializer.instance.id),
-                user_id=str(request.user.id)
+                user_id=str(request.user.id),
             )
             return Response(serializer.data)
         except Exception as e:
@@ -283,9 +281,7 @@ class ChatViewSet(viewsets.GenericViewSet):
 
         business = get_object_or_404(Business, id=business_id)
 
-        customer = Customer(
-            name=customer_name, email=customer_email, phone_number=phone_number
-        )
+        customer = Customer(name=customer_name, email=customer_email, phone_number=phone_number)
         customer.generate_identifier()
         customer.save()
         chat = Chat.objects.create(customer=customer, business=business)
@@ -506,61 +502,22 @@ class ChatViewSet(viewsets.GenericViewSet):
         customer_name = validated_data.get("customer_name")
         customer_email = validated_data.get("customer_email")
 
-        # Retrieve Business and Chat objects
-        if channel == "email_v1" or channel == "email_v2":
-            customer, created = Customer.objects.get_or_create(
-                identifier=customer_identifier,
-                defaults={"name": customer_name or "", "email": customer_email},
-            )
-            if not created and (
-                customer.name != customer_name or customer.email != customer_email
-            ):
-                customer.name = customer_name
-                customer.email = customer_email
-                customer.save()
-
-            chat, created = Chat.objects.get_or_create(
-                business=business,
-                identifier=chat_identifier,
-                defaults={"customer": customer},
-            )
-
-        else:
-            chat = get_object_or_404(Chat, business_id=business, identifier=chat_identifier)
-
-        # Retrieve knowledge bases and instructions for the business
-        knowledge_bases = business.business_kb.all()
-        # knowledge_base_contents = dummy_knowledge_base
-        if knowledge_bases:
-            # instructions = business.reply_instructions
-            # knowledge_base_contents = "\n".join(
-            #     [kb.cleaned_data for kb in knowledge_bases]
-            # )
-            knowledge_base_contents = [kb.cleaned_data for kb in knowledge_bases]
-        else:
-            return Response(
-                "This business has no knowledge base, kindly create one to activate auto response"
-            )
-
-        # Retrieve escalation departments for the business
-        # escalation_departments = "/".join(
-        #     [dept.name for dept in business.escalation_departments.all()]
-        # )
-
-        # Ensure messages are ordered by creation time (or however they should be ordered)
-        all_messages = (
-            Message.objects.filter(chat=chat)
-            .order_by("-sent_time")
-            .values_list("sanusi_response", "content")[:10]
+        service = AutoResponseService(business)
+        chat = service.get_chat(
+            channel=channel,
+            chat_identifier=chat_identifier,
+            customer_identifier=customer_identifier,
+            customer_name=customer_name,
+            customer_email=customer_email,
         )
-        result = list(all_messages)
-        sanusi_response = [item[0] for item in result if item[0] is not None]
-        content = [item[1] for item in result if item[1] is not None]
 
-        sanusi_response_str = ", ".join(sanusi_response)
-        content_str = ", ".join(content)
-        last_message = Message.objects.filter(chat=chat, sender="customer")[:2]
-        # Build the prompt
+        # Gather history and knowledge base for prompts
+        try:
+            knowledge_base_contents = service.get_knowledge_base_contents()
+        except LogicException as exc:
+            return Response(str(exc))
+
+        sanusi_response_str, content_str, last_message = service.history(chat)
         prompt = []
 
         # add all knowlegdebase to the prompt
@@ -589,128 +546,13 @@ class ChatViewSet(viewsets.GenericViewSet):
             return Response(structured_response, status=status.HTTP_200_OK)
 
         if channel == "email_v1" or channel == "email":
-            response_instructions_prompt = [
-                {
-                    "role": "system",
-                    "content": f"response_instructions: {response_instructions}",
-                },
-                {
-                    "role": "system",
-                    "content": f"knowledge base to answer from: {knowledge_base_contents}",
-                },
-                {
-                    "role": "system",
-                    "content": (  # noqa: E501
-                        "User's previous messages for reflection: "
-                        f"{last_message.content if last_message else ''} "
-                        "and your last response was: "
-                        f"{last_message.sanusi_response if last_message else ' '} and "
-                        "user's name is "
-                        f"{customer_name}"
-                    ),
-                },
-                {"role": "user", "content": f"{message}"},
-            ]
-            answer_4_response = generate_response_chat(response_instructions_prompt, 300)
-
-            escalation_department_prompt = [
-                {
-                    "role": "system",
-                    "content": (
-                        f"escalation_instructions: {escalation_instructions}. "
-                        "Possible answers are 'sales', 'operations', 'billing', "
-                        "'engineering', 'none'. none if you are unable to determine "
-                        "the department from the options provided"
-                    ),
-                },
-                {
-                    "role": "assistant",
-                    "content": f"message to be analysed: {message}",
-                },
-            ]
-            answer_4_escalation_department = generate_response_chat(
-                escalation_department_prompt, 1
+            response_json = service.handle_email_v1(
+                chat=chat,
+                message=message,
+                customer_name=customer_name,
+                sender=sender,
+                channel=channel,
             )
-            print(answer_4_escalation_department)
-
-            sentiment_analysis_prompt = [
-                {
-                    "role": "system",
-                    "content": (
-                        f"sentiment_analysis: {sentiment_analysis}. "
-                        "Possible answers are 'positive', 'negative', 'neutral'."
-                    ),
-                },
-                {
-                    "role": "assistant",
-                    "content": f"message to be analysed: {message}",
-                },
-            ]
-            answer_4_sentiment = generate_response_chat(sentiment_analysis_prompt, 1)
-
-            severity_instructions_prompt = [
-                {
-                    "role": "system",
-                    "content": (
-                        f"severity_instructions: {severity_instructions}. "
-                        "only answers are 'low', 'medium', 'high'."
-                    ),
-                },
-                {
-                    "role": "assistant",
-                    "content": f"message to be analysed: {message}",
-                },
-            ]
-            answer_4_severity = generate_response_chat(severity_instructions_prompt, 1)
-
-            severity = answer_4_severity["choices"][0]["message"]["content"].lower().strip()
-            if severity not in ["low", "medium", "high"]:
-                severity = "low"  # default to 'low' if invalid response
-
-            chat_context_instructions_prompt = [
-                {
-                    "role": "system",
-                    "content": f"Chat Context instructions: {chat_context_instructions}",
-                },
-                {
-                    "role": "assistant",
-                    "content": (
-                        f"Chat to be analysed: ('sanusi previous responses': "
-                        f"{sanusi_response_str}), "
-                        f"('the user messages': {content_str}), "
-                        f"('user's current message': {message})"
-                    ),
-                },
-            ]
-            answer_4_chat_context = generate_response_chat(chat_context_instructions_prompt, 1)
-
-            text = answer_4_response["choices"][0]["message"]["content"]
-            html_text = html.escape(text)  # This will escape the text
-
-            html_text = html_text.replace(
-                "\n", "<br/>"
-            )  # Replace newline characters with HTML line breaks
-
-            response_html = "<p>{}</p>".format(html_text)
-
-            response_json = {
-                "response": response_html,
-                "escalate_issue": (
-                    True
-                    if answer_4_escalation_department["choices"][0]["message"][
-                        "content"
-                    ].lower()
-                    in ["sales", "operations", "billing", "engineering", "support"]
-                    else False
-                ),
-                "escalation_department": answer_4_escalation_department["choices"][0][
-                    "message"
-                ]["content"],
-                "severity": severity,
-                "sentiment": answer_4_sentiment["choices"][0]["message"]["content"],
-                "chat_context": answer_4_chat_context["choices"][0]["message"]["content"],
-            }
-            save_chat_and_message(chat, sender, message, response_json, channel)
             return Response(response_json, status=status.HTTP_200_OK)
 
         if channel == "email_v2":
@@ -776,9 +618,7 @@ class ChatViewSet(viewsets.GenericViewSet):
                                 "instructions provided. "
                                 "An assistant is supposed to listen to instructions."
                             )
-                            logger.error(
-                                f"Error occurred during attempt {attempt + 1}: {str(e)}"
-                            )
+                            logger.error(f"Error occurred during attempt {attempt + 1}: {str(e)}")
                         else:
                             logger.error(f"All attempts failed. Error: {str(e)}")
                             print(answer)
@@ -789,9 +629,7 @@ class ChatViewSet(viewsets.GenericViewSet):
                                 "severity": "",
                                 "sentiment": "",
                             }
-                            save_chat_and_message(
-                                chat, sender, message, response_json, channel
-                            )
+                            save_chat_and_message(chat, sender, message, response_json, channel)
                             return Response(data=response_json, status=status.HTTP_200_OK)
 
             # chat.channel = channel
@@ -812,9 +650,7 @@ class ChatViewSet(viewsets.GenericViewSet):
 
                 # Check if response_parts is an error message
                 if isinstance(response_parts, dict) and "data" in response_parts:
-                    return Response(
-                        response_parts, status=status.HTTP_500_INTERNAL_SERVER_ERROR
-                    )
+                    return Response(response_parts, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
                 response_json = {
                     "response": response_parts[0] if len(response_parts) > 0 else None,
@@ -843,45 +679,20 @@ class ChatViewSet(viewsets.GenericViewSet):
                         "\nRemember to adhere strictly to the response instructions provided. "
                         "an assistant is supposed to listen to instructions"
                     )
-                    logger.warning(
-                        f"Retry attempt {attempt + 1} due to missing or empty field."
-                    )
+                    logger.warning(f"Retry attempt {attempt + 1} due to missing or empty field.")
                     continue
             # If we reached this point, it means all attempts failed.
             return Response(data=response_json, status=status.HTTP_200_OK)
 
         elif channel == "chat_v2":
-            # Generate a response using the constructed prompt
-            response_content = generate_response_chat(prompt)
-
-            # Extract answer from the response
-            answer = response_content["choices"][0]["message"]["content"]
-            max_retry_attempts = 3
-            for attempt in range(max_retry_attempts):
-                logger.error("retrying attempt %d", attempt)
-                try:
-                    # Attempt to parse as JSON
-                    response_json = json.loads(answer)
-                except json.JSONDecodeError:
-                    try:
-                        # If the above fails, attempt to parse as a Python dictionary string
-                        response_json = ast.literal_eval(answer)
-                        break
-                    except (ValueError, SyntaxError):
-                        # If parsing fails, add adherence reminder to the system
-                        # instructions and continue
-                        if attempt < max_retry_attempts - 1:  # not the last attempt
-                            prompt[0]["content"] += (
-                                "\nRemember to adhere strictly to the response "
-                                "instructions provided. "
-                                "an assistant is supposed to listen to instructions"
-                            )
-                        else:
-                            logger.error(
-                                "The assistant's response could not be parsed as JSON or a Python "
-                                "dictionary string."
-                            )
-                            response_json = answer  # Return the original string
+            response_json = service.handle_chat_v2(
+                chat=chat,
+                message=message,
+                customer_name=customer_name,
+                sender=sender,
+                channel=channel,
+            )
+            return Response(response_json, status=status.HTTP_200_OK)
 
         elif channel in valid_channels:
             # determine the context figure out which knowledge base to choose from
@@ -906,12 +717,12 @@ class ChatViewSet(viewsets.GenericViewSet):
                 which_category = [
                     {
                         "role": "system",
-                    "content": (
-                        f"Based on the message content, which product category does this context of "  # noqa: E501
-                        f"this message fall in, "
-                        f"respond with only one word from this list {Category.objects.all()}, "
-                        "if it is difficult to determine, then you should respond with 'Sorry, we currently don't have this product."  # noqa: E501
-                    ),
+                        "content": (
+                            f"Based on the message content, which product category does this context of "  # noqa: E501
+                            f"this message fall in, "
+                            f"respond with only one word from this list {Category.objects.all()}, "
+                            "if it is difficult to determine, then you should respond with 'Sorry, we currently don't have this product."  # noqa: E501
+                        ),
                     },
                     {"role": "user", "content": f"{message}"},
                 ]
@@ -964,7 +775,7 @@ class ChatViewSet(viewsets.GenericViewSet):
                     prompt = [
                         {
                             "role": "system",
-                        "content": f"We have identified the following probable products based on the message content. Which one is the most relevant?\n\n{product_list_string}\n\nIf none of these match, respond with 'None'.",  # noqa: E501
+                            "content": f"We have identified the following probable products based on the message content. Which one is the most relevant?\n\n{product_list_string}\n\nIf none of these match, respond with 'None'.",  # noqa: E501
                         },
                         {"role": "user", "content": message},
                     ]
@@ -1017,9 +828,7 @@ class ChatViewSet(viewsets.GenericViewSet):
                     "content": f"message to be analysed: {message}",
                 },
             ]
-            answer_4_escalation_department = generate_response_chat(
-                escalation_department_prompt, 1
-            )
+            answer_4_escalation_department = generate_response_chat(escalation_department_prompt, 1)
 
             sentiment_analysis_prompt = [
                 {
@@ -1063,15 +872,13 @@ class ChatViewSet(viewsets.GenericViewSet):
                 "response": answer_4_response["choices"][0]["message"]["content"],
                 "escalate_issue": (
                     True
-                    if answer_4_escalation_department["choices"][0]["message"][
-                        "content"
-                    ].lower()
+                    if answer_4_escalation_department["choices"][0]["message"]["content"].lower()
                     in ["sales", "operations", "billing", "engineering", "support"]
                     else False
                 ),
-                "escalation_department": answer_4_escalation_department["choices"][0][
-                    "message"
-                ]["content"],
+                "escalation_department": answer_4_escalation_department["choices"][0]["message"][
+                    "content"
+                ],
                 "severity": severity,
                 "sentiment": answer_4_sentiment["choices"][0]["message"]["content"],
                 "chat_context": answer_4_chat_context["choices"][0]["message"]["content"],
@@ -1121,18 +928,14 @@ class ChatViewSet(viewsets.GenericViewSet):
                 except ValueError:
                     try:
                         try:
-                            response_content = re.search(r"Response: (.*?)\r\n", answer).group(
-                                1
-                            )
+                            response_content = re.search(r"Response: (.*?)\r\n", answer).group(1)
                         except AttributeError:
                             response_json = parse_response_data(answer)
                             print(
                                 response_json,
                                 "-----------this is after value error for email_v1-----------",
                             )
-                            save_chat_and_message(
-                                chat, sender, message, response_json, channel
-                            )
+                            save_chat_and_message(chat, sender, message, response_json, channel)
                             return Response(response_json, status=status.HTTP_200_OK)
                     except (
                         json.JSONDecodeError,
@@ -1250,9 +1053,7 @@ def create_chat(request):
 
         business = get_object_or_404(Business, id=company_id)
 
-        customer = Customer(
-            name=customer_name, email=customer_email, phone_number=phone_number
-        )
+        customer = Customer(name=customer_name, email=customer_email, phone_number=phone_number)
         customer.generate_identifier()
         chat = Chat.objects.create(customer=customer, business=business)
         chat.generate_identifier()
@@ -1367,8 +1168,7 @@ def auto_response(request):
                 # instructions = knowledge_base.reply_instructions # check for usage later
             except AttributeError:
                 return Response(
-                    "This business has no knowledge, kindly create one "
-                    "to activate auto response"
+                    "This business has no knowledge, kindly create one " "to activate auto response"
                 )
             escalation_departments = ", ".join(
                 [dept.name for dept in business.escalation_departments.all()]
@@ -1411,9 +1211,7 @@ def auto_response(request):
         answer = response_lines[0]
         escalation_and_sentiment = response_lines[1]
 
-        conversation_id = (
-            response_content["id"] if conversation_id is None else conversation_id
-        )
+        conversation_id = response_content["id"] if conversation_id is None else conversation_id
 
         department_sentiment_pattern = r"Department: (.*), Sentiment: (.*)"
         match = re.match(department_sentiment_pattern, escalation_and_sentiment)
