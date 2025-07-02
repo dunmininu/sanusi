@@ -1,12 +1,11 @@
-from rest_framework import mixins, viewsets, status
+from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from django.contrib.auth import get_user_model
 from accounts.serializers import RegisterSerializer, UserSerializer, LoginSerializer
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
-from rest_framework.authtoken.models import Token
-from django.contrib.auth import get_user_model, authenticate
+from django.contrib.auth import authenticate
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.db import transaction
 
@@ -166,7 +165,7 @@ class AuthenticationViewSet(viewsets.GenericViewSet):
             token.blacklist()
 
             return Response({"message": "Logged out successfully"}, status=status.HTTP_200_OK)
-        except Exception as e:
+        except Exception:
             return Response({"error": "Invalid token"}, status=status.HTTP_400_BAD_REQUEST)
 
     @swagger_auto_schema(
@@ -212,7 +211,7 @@ class AuthenticationViewSet(viewsets.GenericViewSet):
                 status=status.HTTP_200_OK,
             )
 
-        except Exception as e:
+        except Exception:
             return Response(
                 {"error": "Invalid refresh token"}, status=status.HTTP_401_UNAUTHORIZED
             )

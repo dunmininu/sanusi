@@ -1,6 +1,5 @@
 from django.db import models
 
-from business.models import Business
 
 
 class EscalationDepartment(models.Model):

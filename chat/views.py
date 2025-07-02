@@ -1,5 +1,8 @@
-import ast, logging, json, re
+import ast
 import html
+import json
+import logging
+import re
 
 from django.views.decorators.csrf import csrf_exempt
 from django.http import JsonResponse, Http404
@@ -7,15 +10,11 @@ from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from django.views.decorators.http import require_http_methods
 from django.db import transaction
-from django.db.models import Q, When, Case, CharField, F, Q, Value
-from django.db.models.functions import Concat
-from django_filters import FilterSet, CharFilter, DateTimeFilter
+from django.db.models import Case, CharField, Q, Value, When
 import django_filters
 
 
-from rest_framework.response import Response
-from rest_framework.pagination import PageNumberPagination
-from rest_framework import viewsets, status, mixins, filters
+from rest_framework import filters, mixins, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
@@ -41,27 +40,20 @@ from .serializers import (
     CustomerSerializer,
     RestructureTextSerializer,
 )
-from .models import Chat, Message, Customer, SENDER_CHOICES
 
 from sanusi.views import (
     generate_response,
     generate_response_chat,
-    generate_response_chat_v2,
     generate_response_email,
     generate_response_email_v2,
-    construct_index,
     structure_response,
 )
 from business.models import Business
-from business.private.models import Category, KnowledgeBase, Product
+from business.private.models import Category, Product
 from sanusi.models import Message as sanusi_message
 from sanusi.utils import (
-    is_valid_format,
-    parse_answer_with_regex,
-    parse_json_from_answer,
     parse_response_data,
     save_chat_and_message,
-    try_parse_json,
 )
 
 from sanusi_backend.classes.custom import CustomPagination, BaseSearchFilter
@@ -480,7 +472,7 @@ class ChatViewSet(viewsets.GenericViewSet):
         except Http404:
             raise Http404("Chat not found")
 
-        if chat.is_auto_response == True:
+        if chat.is_auto_response is True:
             chat.is_auto_response = False
             chat.save()
         else:
@@ -608,7 +600,14 @@ class ChatViewSet(viewsets.GenericViewSet):
                 },
                 {
                     "role": "system",
-                    "content": f"User's previous messages for reflection: {last_message.content if last_message else ''} and your last response was: {last_message.sanusi_response if last_message else ' '} and user's name is {customer_name}",
+                    "content": (  # noqa: E501
+                        "User's previous messages for reflection: "
+                        f"{last_message.content if last_message else ''} "
+                        "and your last response was: "
+                        f"{last_message.sanusi_response if last_message else ' '} and "
+                        "user's name is "
+                        f"{customer_name}"
+                    ),
                 },
                 {"role": "user", "content": f"{message}"},
             ]
@@ -617,7 +616,12 @@ class ChatViewSet(viewsets.GenericViewSet):
             escalation_department_prompt = [
                 {
                     "role": "system",
-                    "content": f"escalation_instructions: {escalation_instructions}. Possible answers are 'sales', 'operations', 'billing', 'engineering', 'none'. none if you are unable to determine the department from the options provided",
+                    "content": (
+                        f"escalation_instructions: {escalation_instructions}. "
+                        "Possible answers are 'sales', 'operations', 'billing', "
+                        "'engineering', 'none'. none if you are unable to determine "
+                        "the department from the options provided"
+                    ),
                 },
                 {
                     "role": "assistant",
@@ -632,7 +636,10 @@ class ChatViewSet(viewsets.GenericViewSet):
             sentiment_analysis_prompt = [
                 {
                     "role": "system",
-                    "content": f"sentiment_analysis: {sentiment_analysis}. Possible answers are 'positive', 'negative', 'neutral'.",
+                    "content": (
+                        f"sentiment_analysis: {sentiment_analysis}. "
+                        "Possible answers are 'positive', 'negative', 'neutral'."
+                    ),
                 },
                 {
                     "role": "assistant",
@@ -644,7 +651,10 @@ class ChatViewSet(viewsets.GenericViewSet):
             severity_instructions_prompt = [
                 {
                     "role": "system",
-                    "content": f"severity_instructions: {severity_instructions}. only answers are 'low', 'medium', 'high'.",
+                    "content": (
+                        f"severity_instructions: {severity_instructions}. "
+                        "only answers are 'low', 'medium', 'high'."
+                    ),
                 },
                 {
                     "role": "assistant",
@@ -664,7 +674,12 @@ class ChatViewSet(viewsets.GenericViewSet):
                 },
                 {
                     "role": "assistant",
-                    "content": f"Chat to be analysed: ('sanusi previous responses': {sanusi_response_str}), ('the user messages': {content_str}), ('user's current message': {message})",
+                    "content": (
+                        f"Chat to be analysed: ('sanusi previous responses': "
+                        f"{sanusi_response_str}), "
+                        f"('the user messages': {content_str}), "
+                        f"('user's current message': {message})"
+                    ),
                 },
             ]
             answer_4_chat_context = generate_response_chat(chat_context_instructions_prompt, 1)
@@ -700,10 +715,16 @@ class ChatViewSet(viewsets.GenericViewSet):
 
         if channel == "email_v2":
             prompt.insert(0, f"Reply instructions: {email_v1_instructions}")
-            prompt.insert(1, f"knowledge base to answer based off: {knowledge_base_contents}")
+            prompt.insert(
+                1,
+                f"knowledge base to answer based off: {knowledge_base_contents}",
+            )
             prompt.insert(
                 2,
-                f"User's previous messages for reflection: {last_message.content if last_message else ''}",
+                (
+                    f"User's previous messages for reflection: "
+                    f"{last_message.content if last_message else ''}"
+                ),
             )
             prompt.insert(3, f"User's name: {customer_name}")
             prompt.insert(4, f"User's Message to be replied to: {message}")
@@ -724,23 +745,37 @@ class ChatViewSet(viewsets.GenericViewSet):
                         response_json,
                         "-----------this is the parsed response--------------",
                     )
-                    save_chat_and_message(chat, sender, message, response_json, channel)
+                    save_chat_and_message(
+                        chat,
+                        sender,
+                        message,
+                        response_json,
+                        channel,
+                    )
                     return Response(response_json, status=status.HTTP_200_OK)
                 except ValueError:
-                    print(answer, "-----------this is the answer--------------")
+                    print(
+                        answer,
+                        "-----------this is the answer--------------",
+                    )
                     try:
                         response_json = parse_response_data(answer)
                         print(
                             response_json,
-                            "-----------this is after value error for email_v1---------------------",
+                            (
+                                "-----------this is after value error for email_v1"
+                                "---------------------"
+                            ),
                         )
                         save_chat_and_message(chat, sender, message, response_json, channel)
                         return Response(response_json, status=status.HTTP_200_OK)
                     except (json.JSONDecodeError, ValueError, AttributeError) as e:
                         if attempt < max_retry_attempts - 1:  # not the last attempt
-                            prompt[
-                                0
-                            ] += "\nRemember to adhere strictly to the response instructions provided. An assistant is supposed to listen to instructions."
+                            prompt[0] += (
+                                "\nRemember to adhere strictly to the response "
+                                "instructions provided. "
+                                "An assistant is supposed to listen to instructions."
+                            )
                             logger.error(
                                 f"Error occurred during attempt {attempt + 1}: {str(e)}"
                             )
@@ -804,9 +839,10 @@ class ChatViewSet(viewsets.GenericViewSet):
                     )
                     return Response(data=response_json, status=status.HTTP_200_OK)
                 else:
-                    prompt[0][
-                        "content"
-                    ] += "\nRemember to adhere strictly to the response instructions provided. an assistant is supposed to listen to instructions"
+                    prompt[0]["content"] += (
+                        "\nRemember to adhere strictly to the response instructions provided. "
+                        "an assistant is supposed to listen to instructions"
+                    )
                     logger.warning(
                         f"Retry attempt {attempt + 1} due to missing or empty field."
                     )
@@ -832,14 +868,18 @@ class ChatViewSet(viewsets.GenericViewSet):
                         response_json = ast.literal_eval(answer)
                         break
                     except (ValueError, SyntaxError):
-                        # If parsing fails, add adherence reminder to the system instructions and continue
+                        # If parsing fails, add adherence reminder to the system
+                        # instructions and continue
                         if attempt < max_retry_attempts - 1:  # not the last attempt
-                            prompt[0][
-                                "content"
-                            ] += "\nRemember to adhere strictly to the response instructions provided. an assistant is supposed to listen to instructions"
+                            prompt[0]["content"] += (
+                                "\nRemember to adhere strictly to the response "
+                                "instructions provided. "
+                                "an assistant is supposed to listen to instructions"
+                            )
                         else:
                             logger.error(
-                                "The assistant's response could not be parsed as JSON or a Python dictionary string."
+                                "The assistant's response could not be parsed as JSON or a Python "
+                                "dictionary string."
                             )
                             response_json = answer  # Return the original string
 
@@ -848,7 +888,13 @@ class ChatViewSet(viewsets.GenericViewSet):
             which_knowledge_base = [
                 {
                     "role": "system",
-                    "content": "Based on the message content, which knowledge base should be used for the message, respond with only one word from this list [inventory, general, billing, business logic, finance, security, operations, engineering], if it is difficult to determine, then you should respond with general.",
+                    "content": (
+                        "Based on the message content, which knowledge base should be used for the message, "  # noqa: E501
+                        "respond with only one word from this list [inventory, general, billing, "
+                        "business logic, finance, security, operations, "
+                        "engineering], if it is difficult to "
+                        "determine, then you should respond with general."
+                    ),
                 },
                 {"role": "user", "content": f"{message}"},
             ]
@@ -860,7 +906,12 @@ class ChatViewSet(viewsets.GenericViewSet):
                 which_category = [
                     {
                         "role": "system",
-                        "content": f"Based on the message content, which product category does this context of this message fall in, respond with only one word from this list {Category.objects.all()}, if it is difficult to determine, then you should respond with 'Sorry, we currently don't have this product.",
+                    "content": (
+                        f"Based on the message content, which product category does this context of "  # noqa: E501
+                        f"this message fall in, "
+                        f"respond with only one word from this list {Category.objects.all()}, "
+                        "if it is difficult to determine, then you should respond with 'Sorry, we currently don't have this product."  # noqa: E501
+                    ),
                     },
                     {"role": "user", "content": f"{message}"},
                 ]
@@ -913,7 +964,7 @@ class ChatViewSet(viewsets.GenericViewSet):
                     prompt = [
                         {
                             "role": "system",
-                            "content": f"We have identified the following probable products based on the message content. Which one is the most relevant?\n\n{product_list_string}\n\nIf none of these match, respond with 'None'.",
+                        "content": f"We have identified the following probable products based on the message content. Which one is the most relevant?\n\n{product_list_string}\n\nIf none of these match, respond with 'None'.",  # noqa: E501
                         },
                         {"role": "user", "content": message},
                     ]
@@ -950,7 +1001,7 @@ class ChatViewSet(viewsets.GenericViewSet):
                 },
                 {
                     "role": "system",
-                    "content": f"User's previous messages for reflection: {[message.content for message in last_message] if last_message else ''} and your last response was: {[message.sanusi_response for message in last_message] if last_message else ' '} and user's name is {customer_name}",
+                    "content": f"User's previous messages for reflection: {[message.content for message in last_message] if last_message else ''} and your last response was: {[message.sanusi_response for message in last_message] if last_message else ' '} and user's name is {customer_name}",  # noqa: E501
                 },
                 {"role": "user", "content": f"{message}"},
             ]
@@ -959,7 +1010,7 @@ class ChatViewSet(viewsets.GenericViewSet):
             escalation_department_prompt = [
                 {
                     "role": "system",
-                    "content": f"escalation_instructions: {escalation_instructions}. Possible answers are 'sales', 'operations', 'billing', 'engineering', 'support', 'legal', 'none'. none if you are unable to determine the department from the options provided",
+                    "content": f"escalation_instructions: {escalation_instructions}. Possible answers are 'sales', 'operations', 'billing', 'engineering', 'support', 'legal', 'none'. none if you are unable to determine the department from the options provided",  # noqa: E501
                 },
                 {
                     "role": "assistant",
@@ -973,7 +1024,7 @@ class ChatViewSet(viewsets.GenericViewSet):
             sentiment_analysis_prompt = [
                 {
                     "role": "system",
-                    "content": f"sentiment_analysis: {sentiment_analysis}. Possible answers are 'positive', 'negative', 'neutral'.",
+                    "content": f"sentiment_analysis: {sentiment_analysis}. Possible answers are 'positive', 'negative', 'neutral'.",  # noqa: E501
                 },
                 {
                     "role": "assistant",
@@ -985,7 +1036,7 @@ class ChatViewSet(viewsets.GenericViewSet):
             severity_instructions_prompt = [
                 {
                     "role": "system",
-                    "content": f"severity_instructions: {severity_instructions}. only answers are 'low', 'medium', 'high'.",
+                    "content": f"severity_instructions: {severity_instructions}. only answers are 'low', 'medium', 'high'.",  # noqa: E501
                 },
                 {
                     "role": "assistant",
@@ -1004,7 +1055,7 @@ class ChatViewSet(viewsets.GenericViewSet):
                 },
                 {
                     "role": "assistant",
-                    "content": f"Chat to be analysed: ('sanusi previous responses': {sanusi_response_str}), ('the user messages': {content_str}), ('user's current message': {message})",
+                    "content": f"Chat to be analysed: ('sanusi previous responses': {sanusi_response_str}), ('the user messages': {content_str}), ('user's current message': {message})",  # noqa: E501
                 },
             ]
             answer_4_chat_context = generate_response_chat(chat_context_instructions_prompt, 5)

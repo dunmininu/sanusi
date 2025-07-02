@@ -1,5 +1,4 @@
 from django.db import models
-import uuid
 from sanusi_backend.classes.base_model import BaseModel
 
 
