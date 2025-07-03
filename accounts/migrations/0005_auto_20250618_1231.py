@@ -10,8 +10,8 @@ class Migration(migrations.Migration):
 
     # operations = [
     #     migrations.RunSQL(
-    #         "ALTER TABLE accounts_user_businesses ALTER COLUMN user_id TYPE uuid USING user_id::uuid;",
-    #         # reverse_sql="ALTER TABLE accounts_user_businesses ALTER COLUMN user_id TYPE bigint USING user_id::bigint;"
+    #         "ALTER TABLE accounts_user_businesses ALTER COLUMN user_id TYPE uuid USING user_id::uuid;",  # noqa: E501
+    #         # reverse_sql="ALTER TABLE accounts_user_businesses ALTER COLUMN user_id TYPE bigint USING user_id::bigint;"  # noqa: E501
     #     ),
     # ]
     operations = [
