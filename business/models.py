@@ -18,6 +18,13 @@ class BusinessTypeChoices(models.TextChoices):
     SAAS = "saas"
 
 
+class ProductStatusChoices(models.TextChoices):
+    ACTIVE = "ACTIVE"
+    OUT_OF_STOCK = "OUT_OF_STOCK"
+    UNAVAILABLE = "UNAVAILABLE"
+    IN_ACTIVE = "IN_ACTIVE"
+
+
 CANCELLED = "CANCELLED"
 PENDING = "PENDING"
 PROCESSING = "PROCESSING"
@@ -178,6 +185,7 @@ class Product(BaseModel):
         Business, on_delete=models.CASCADE, related_name="product", db_index=True
     )
     bundle = models.JSONField(default=dict)
+    status = models.CharField(choices=BusinessTypeChoices.choices, max_length=60, default=ProductStatusChoices.ACTIVE, db_index=True)
 
     def __str__(self):
         return self.name
@@ -273,6 +281,7 @@ class Order(BaseModel):
     business = models.ForeignKey(
         Business, on_delete=models.CASCADE, related_name="order_business", db_index=True
     )
+    meta = models.JSONField()
 
     def __str__(self):
         return f"{self.order_id} - {self.status}"
@@ -363,7 +372,6 @@ class OrderProduct(BaseModel):
     quantity = models.PositiveIntegerField()
     price = models.DecimalField(max_digits=10, decimal_places=2)
     order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name="order_products")
-    meta = models.JSONField()
 
     class Meta:
         unique_together = [

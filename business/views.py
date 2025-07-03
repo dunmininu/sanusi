@@ -759,7 +759,7 @@ class OrderFilter(BaseSearchFilter):
 # Add custom relation filters
 OrderFilter.add_relation_filter("order_id", "order_id")
 OrderFilter.add_relation_filter("status", "status")
-OrderFilter.add_relation_filter("platform", "platform")
+OrderFilter.add_relation_filter("platform", "customer__platform")
 
 
 class OrderViewSet(
@@ -794,7 +794,7 @@ class OrderViewSet(
         filters.OrderingFilter,
     ]
     filterset_class = OrderFilter
-    search_fields = ["order_id", "customer__name", "customer__email", "status"]
+    search_fields = ["order_id", "customer__name", "customer__email", "status", "customer__platform"]
     ordering_fields = [
         "date_created",
         "last_updated",
