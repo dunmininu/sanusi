@@ -397,10 +397,10 @@ class ProductFilter(BaseSearchFilter):
 
 # Add custom relation filters
 ProductFilter.add_relation_filter(
-    'category',
-    'category__id',
-    lookup_expr='exact',
-    filter_class=NumberFilter,
+    'category', 
+    'category__id', 
+    lookup_expr='exact', 
+    filter_class=NumberFilter
 )
 # ProductFilter.add_relation_filter('category__name', 'category__name')
 ProductFilter.add_relation_filter('serial_number', 'serial_number')

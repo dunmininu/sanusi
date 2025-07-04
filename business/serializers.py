@@ -219,7 +219,20 @@ class InventorySerializer(serializers.ModelSerializer):
     )  # For POST/PUT
     class Meta:
         model = Product
-        fields = ["id", "name", "business", "category", "serial_number", "description", "price", "stock_quantity", "image", "bundle", "category_id", "status"]
+        fields = [
+            "id", 
+            "name", 
+            "business", 
+            "category", 
+            "serial_number", 
+            "description", 
+            "price", 
+            "stock_quantity", 
+            "image", 
+            "bundle", 
+            "category_id", 
+            "status"
+        ]
         read_only_fields = ["id","business"]  # Prevent user from manually setting it
 
 
@@ -306,7 +319,13 @@ class OrderProductSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = OrderProduct
-        fields = ["id", "product", "product_id", "quantity", "price"]
+        fields = [
+            "id", 
+            "product", 
+            "product_id", 
+            "quantity", 
+            "price"
+        ]
         read_only_fields = ["id"]
 
 
@@ -314,20 +333,20 @@ class CustomeSerializer(serializers.ModelSerializer):
     class Meta:
         model = Customer
         fields = [
-            "id",
-            "name",
-            "email",
-            "phone_number",
-            "platform",
-            "identifier",
-            "business",
-            "date_created",
+            "id", 
+            "name", 
+            "email", 
+            "phone_number", 
+            "platform", 
+            "identifier", 
+            "business", 
+            "date_created"
         ]
         read_only_fields = [
             "id",
-            "identifier",
-            "business",
-            "date_created",
+            "identifier", 
+            "business", 
+            "date_created"
         ]  # Prevent user from manually setting it
 
 class OrderSerializer(serializers.ModelSerializer):
