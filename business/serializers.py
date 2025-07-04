@@ -637,8 +637,20 @@ class OrderSerializer(serializers.ModelSerializer):
             self._update_inventory(inventory_updates, operation="deduct")
 
         # Update order fields
+        # Fields that should be merged instead of overwritten
+        json_merge_fields = ['delivery_info', 'payment_summary', 'meta']
+
         for attr, value in validated_data.items():
-            setattr(instance, attr, value)
+            if attr in json_merge_fields:
+                current_value = getattr(instance, attr, {}) or {}
+                if isinstance(current_value, dict) and isinstance(value, dict):
+                    current_value.update(value)  # merge new values into existing
+                    setattr(instance, attr, current_value)
+                else:
+                    setattr(instance, attr, value)  # fallback if not dicts
+            else:
+                setattr(instance, attr, value)
+
 
         instance.save()
 
