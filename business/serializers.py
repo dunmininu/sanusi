@@ -220,17 +220,18 @@ class InventorySerializer(serializers.ModelSerializer):
     class Meta:
         model = Product
         fields = [
-            "id",
-            "name",
-            "business",
-            "category",
-            "serial_number",
-            "description",
-            "price",
-            "stock_quantity",
-            "image",
-            "bundle",
-            "category_id",
+            "id", 
+            "name", 
+            "business", 
+            "category", 
+            "serial_number", 
+            "description", 
+            "price", 
+            "stock_quantity", 
+            "image", 
+            "bundle", 
+            "category_id", 
+            "status"
         ]
         read_only_fields = ["id","business"]  # Prevent user from manually setting it
 
@@ -318,7 +319,13 @@ class OrderProductSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = OrderProduct
-        fields = ["id", "product", "product_id", "quantity", "price", "meta"]
+        fields = [
+            "id", 
+            "product", 
+            "product_id", 
+            "quantity", 
+            "price"
+        ]
         read_only_fields = ["id"]
 
 
@@ -326,20 +333,20 @@ class CustomeSerializer(serializers.ModelSerializer):
     class Meta:
         model = Customer
         fields = [
-            "id",
-            "name",
-            "email",
-            "phone_number",
-            "platform",
-            "identifier",
-            "business",
-            "date_created",
+            "id", 
+            "name", 
+            "email", 
+            "phone_number", 
+            "platform", 
+            "identifier", 
+            "business", 
+            "date_created"
         ]
         read_only_fields = [
             "id",
-            "identifier",
-            "business",
-            "date_created",
+            "identifier", 
+            "business", 
+            "date_created"
         ]  # Prevent user from manually setting it
 
 class OrderSerializer(serializers.ModelSerializer):
@@ -359,6 +366,7 @@ class OrderSerializer(serializers.ModelSerializer):
             "order_id",
             "delivery_info",
             "payment_summary",
+            "meta",
             "delivery_date",
             "status",
             "customer_id",
@@ -387,6 +395,7 @@ class OrderSerializer(serializers.ModelSerializer):
         for product_data in order_products_data:
             product_id = product_data.get("product_id")
             stock_quantity = product_data.get("quantity", 0)
+            price = product_data.get("price", 0)
 
             try:
                 product = Product.objects.select_for_update().get(
@@ -413,6 +422,19 @@ class OrderSerializer(serializers.ModelSerializer):
                         "product_id": product_id,
                         "available_quantity": product.stock_quantity,
                         "requested_quantity": stock_quantity,
+                    },
+                )
+
+            # Check if there's enough inventory
+            if product.price > price:
+                ErrorHandler.validation_error(
+                    message=f"Invalid price for product '{product.name}'. Product price: {product.price}, Requested price: {price}",
+                    field="price",
+                    error_code="INVALID_PRICE",
+                    extra_data={
+                        "product_id": product_id,
+                        "product_price": product.price,
+                        "requested_price": price,
                     },
                 )
 
@@ -503,7 +525,7 @@ class OrderSerializer(serializers.ModelSerializer):
                 product_data.get("product_id")
                 quantity = product_data.get("quantity")
                 price = product_data.get("price")
-                meta = product_data.get("meta", {})
+                # meta = product_data.get("meta", {})
 
                 # Get the validated product from inventory_updates
                 product = inventory_updates[i]["product"]
@@ -525,7 +547,7 @@ class OrderSerializer(serializers.ModelSerializer):
                     product=product,
                     quantity=quantity,
                     price=price_value,
-                    meta=meta,
+                    # meta=meta,
                 )
 
             # Update inventory (deduct quantities)
@@ -604,7 +626,7 @@ class OrderSerializer(serializers.ModelSerializer):
                             "product_id": str(op.product.id),
                             "quantity": op.quantity,
                             "price": op.price,
-                            "meta": op.meta,
+                            # "meta": op.meta,
                         }
                     )
                 inventory_updates = self._validate_and_reserve_inventory(
@@ -615,8 +637,20 @@ class OrderSerializer(serializers.ModelSerializer):
             self._update_inventory(inventory_updates, operation="deduct")
 
         # Update order fields
+        # Fields that should be merged instead of overwritten
+        json_merge_fields = ['delivery_info', 'payment_summary', 'meta']
+
         for attr, value in validated_data.items():
-            setattr(instance, attr, value)
+            if attr in json_merge_fields:
+                current_value = getattr(instance, attr, {}) or {}
+                if isinstance(current_value, dict) and isinstance(value, dict):
+                    current_value.update(value)  # merge new values into existing
+                    setattr(instance, attr, current_value)
+                else:
+                    setattr(instance, attr, value)  # fallback if not dicts
+            else:
+                setattr(instance, attr, value)
+
 
         instance.save()
 
@@ -644,7 +678,7 @@ class OrderSerializer(serializers.ModelSerializer):
                     product_data.get("product_id")
                     quantity = product_data.get("quantity")
                     price = product_data.get("price")
-                    meta = product_data.get("meta", {})
+                    # meta = product_data.get("meta", {})
 
                     # Get the validated product from inventory_updates
                     product = inventory_updates[i]["product"]
@@ -668,7 +702,7 @@ class OrderSerializer(serializers.ModelSerializer):
                         product=product,
                         quantity=quantity,
                         price=price_value,
-                        meta=meta,
+                        # meta=meta,
                     )
 
                 # Update inventory (deduct quantities for new products)

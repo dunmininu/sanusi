@@ -397,10 +397,10 @@ class ProductFilter(BaseSearchFilter):
 
 # Add custom relation filters
 ProductFilter.add_relation_filter(
-    'category',
-    'category__id',
-    lookup_expr='exact',
-    filter_class=NumberFilter,
+    'category', 
+    'category__id', 
+    lookup_expr='exact', 
+    filter_class=NumberFilter
 )
 # ProductFilter.add_relation_filter('category__name', 'category__name')
 ProductFilter.add_relation_filter('serial_number', 'serial_number')
@@ -766,7 +766,7 @@ class OrderFilter(BaseSearchFilter):
 # Add custom relation filters
 OrderFilter.add_relation_filter("order_id", "order_id")
 OrderFilter.add_relation_filter("status", "status")
-OrderFilter.add_relation_filter("platform", "platform")
+OrderFilter.add_relation_filter("platform", "customer__platform")
 
 
 class OrderViewSet(
@@ -801,7 +801,7 @@ class OrderViewSet(
         filters.OrderingFilter,
     ]
     filterset_class = OrderFilter
-    search_fields = ["order_id", "customer__name", "customer__email", "status"]
+    search_fields = ["order_id", "customer__name", "customer__email", "status", "customer__platform"]
     ordering_fields = [
         "date_created",
         "last_updated",
