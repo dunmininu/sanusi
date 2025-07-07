@@ -37,11 +37,13 @@ ALLOWED_HOSTS = [
     # "sanusi.sanusi.ai",
     "localhost",
     "127.0.0.1",
+    "sanusi-t701.onrender.com",
 ]
 
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:8080",
     "http://127.0.0.1:8080",
+     "sanusi-t701.onrender.com",
 ]
 CORS_ALLOW_CREDENTIALS = True
 
