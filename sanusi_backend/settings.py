@@ -135,7 +135,6 @@ WSGI_APPLICATION = "sanusi_backend.wsgi.application"
 
 # Database
 # https://docs.djangoproject.com/en/4.1/ref/settings/#databases
-
 DATABASES = {
     # "default": {
     #     "ENGINE": "django.db.backends.sqlite3",
@@ -146,7 +145,7 @@ DATABASES = {
         "NAME": config("DB_NAME"),
         "USER": config("DB_USER"),
         "PASSWORD": config("DB_PASSWORD"),
-        "HOST": "localhost",  # config("DB_HOST"),
+        "HOST":  config("DB_HOST"),
         "PORT": config("DB_PORT", cast=int),
         "ATOMIC_REQUESTS": True,
     },
