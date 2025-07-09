@@ -190,7 +190,12 @@ class Product(BaseModel):
         Business, on_delete=models.CASCADE, related_name="product", db_index=True
     )
     bundle = models.JSONField(default=dict)
-    status = models.CharField(choices=BusinessTypeChoices.choices, max_length=60, default=ProductStatusChoices.ACTIVE, db_index=True)
+    status = models.CharField(
+        choices=BusinessTypeChoices.choices,
+        max_length=60,
+        default=ProductStatusChoices.ACTIVE,
+        db_index=True,
+    )
 
     def __str__(self):
         return self.name

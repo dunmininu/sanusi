@@ -1,5 +1,5 @@
-from datetime import datetime, timedelta
-from django.db.models import Count, Sum, F, FloatField, Avg
+from datetime import timedelta
+from django.db.models import Sum, F, FloatField, Avg
 from django.utils.timezone import now
 from django.db.models.functions import Cast
 from decimal import Decimal
@@ -119,7 +119,9 @@ def get_order_statistics(business):
 
     # 6. Revenue percentage change
     if last_month_revenue > 0:
-        revenue_change_percentage = ((current_revenue - last_month_revenue) / last_month_revenue) * 100
+        revenue_change_percentage = (
+            (current_revenue - last_month_revenue) / last_month_revenue * 100
+        )
     else:
         revenue_change_percentage = 100.0 if current_revenue > 0 else 0.0
 

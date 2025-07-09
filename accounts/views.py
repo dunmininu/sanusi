@@ -1,11 +1,14 @@
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
-from django.contrib.auth import get_user_model
-from accounts.serializers import RegisterSerializer, UserSerializer, LoginSerializer
+from django.contrib.auth import authenticate, get_user_model
+from accounts.serializers import (
+    LoginSerializer,
+    RegisterSerializer,
+    UserSerializer,
+)
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
-from django.contrib.auth import get_user_model, authenticate
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.db import transaction
 

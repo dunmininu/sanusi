@@ -432,7 +432,10 @@ class OrderSerializer(serializers.ModelSerializer):
             # Check if there's enough inventory
             if product.price > price:
                 ErrorHandler.validation_error(
-                    message=f"Invalid price for product '{product.name}'. Product price: {product.price}, Requested price: {price}",
+                    message=(
+                        f"Invalid price for product '{product.name}'. "
+                        f"Product price: {product.price}, Requested price: {price}"
+                    ),
                     field="price",
                     error_code="INVALID_PRICE",
                     extra_data={

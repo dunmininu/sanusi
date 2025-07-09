@@ -10,9 +10,9 @@ from loguru import logger
 from rest_framework import mixins, filters, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
-from rest_framework.views import APIView
 from rest_framework.exceptions import ValidationError
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.status import HTTP_400_BAD_REQUEST
 from drf_yasg.utils import swagger_auto_schema, no_body
 from drf_yasg import openapi
 from django_filters import NumberFilter
@@ -34,7 +34,11 @@ from .serializers import (
     OrderSerializer,
 )
 from sanusi_backend.classes.custom import CustomPagination, BaseSearchFilter
-from analytics.services.statistics import get_customer_statistics, get_product_statistics, get_order_statistics
+from analytics.services.statistics import (
+    get_customer_statistics,
+    get_order_statistics,
+    get_product_statistics,
+)
 
 
 class BusinessApiViewSet(viewsets.ModelViewSet):
@@ -97,7 +101,10 @@ class BusinessApiViewSet(viewsets.ModelViewSet):
                     "user_id": str(request.user.id),
                 },
             )
-            return Response({"error": f"Unexpected error creating business: {str(e)}"}, status=HTTP_400_BAD_REQUEST)
+            return Response(
+                {"error": f"Unexpected error creating business: {str(e)}"},
+                status=HTTP_400_BAD_REQUEST,
+            )
 
     @swagger_auto_schema(
         manual_parameters=[
@@ -173,7 +180,10 @@ class BusinessApiViewSet(viewsets.ModelViewSet):
                     "user_id": str(request.user.id),
                 },
             )
-            return Response({"error": f"Unexpected error update business: {str(e)}"}, status=HTTP_400_BAD_REQUEST)
+            return Response(
+                {"error": f"Unexpected error update business: {str(e)}"},
+                status=HTTP_400_BAD_REQUEST,
+            )
 
     def list(self, request, *args, **kwargs):
         return super().list(request, *args, **kwargs)
@@ -522,7 +532,10 @@ class InventoryViewSet(
                     "user_id": str(request.user.id),
                 },
             )
-            return Response({"error": f"Unexpected error creating product: {str(e)}"}, status=HTTP_400_BAD_REQUEST)
+            return Response(
+                {"error": f"Unexpected error creating product: {str(e)}"},
+                status=HTTP_400_BAD_REQUEST,
+            )
             
 
     @transaction.atomic
@@ -584,7 +597,10 @@ class InventoryViewSet(
                     "user_id": str(request.user.id),
                 },
             )
-            return Response({"error": f"Unexpected error updating product: {str(e)}"}, status=HTTP_400_BAD_REQUEST)
+            return Response(
+                {"error": f"Unexpected error updating product: {str(e)}"},
+                status=HTTP_400_BAD_REQUEST,
+            )
 
 
 class CategoryViewSet(
@@ -706,7 +722,10 @@ class CategoryViewSet(
                     "user_id": str(request.user.id),
                 },
             )
-            return Response({"error": f"Unexpected error creating category: {str(e)}"}, status=HTTP_400_BAD_REQUEST)
+            return Response(
+                {"error": f"Unexpected error creating category: {str(e)}"},
+                status=HTTP_400_BAD_REQUEST,
+            )
 
     @transaction.atomic
     @with_telemetry(span_name="update_category")
@@ -762,7 +781,10 @@ class CategoryViewSet(
                     "user_id": str(request.user.id),
                 },
             )
-            return Response({"error": f"Unexpected error update category: {str(e)}"}, status=HTTP_400_BAD_REQUEST)
+            return Response(
+                {"error": f"Unexpected error update category: {str(e)}"},
+                status=HTTP_400_BAD_REQUEST,
+            )
 
 
 # For Order model
@@ -810,7 +832,13 @@ class OrderViewSet(
         filters.OrderingFilter,
     ]
     filterset_class = OrderFilter
-    search_fields = ["order_id", "customer__name", "customer__email", "status", "customer__platform"]
+    search_fields = [
+        "order_id",
+        "customer__name",
+        "customer__email",
+        "status",
+        "customer__platform",
+    ]
     ordering_fields = [
         "date_created",
         "last_updated",
@@ -905,7 +933,10 @@ class OrderViewSet(
                     "user_id": str(request.user.id),
                 },
             )
-            return Response({"error": f"Unexpected error creating order: {str(e)}"}, status=HTTP_400_BAD_REQUEST)
+            return Response(
+                {"error": f"Unexpected error creating order: {str(e)}"},
+                status=HTTP_400_BAD_REQUEST,
+            )
 
     @transaction.atomic
     @with_telemetry(span_name="update_order")
@@ -969,7 +1000,10 @@ class OrderViewSet(
                     "user_id": str(request.user.id),
                 },
             )
-            return Response({"error": f"Unexpected error updating order: {str(e)}"}, status=HTTP_400_BAD_REQUEST)
+            return Response(
+                {"error": f"Unexpected error updating order: {str(e)}"},
+                status=HTTP_400_BAD_REQUEST,
+            )
             
 
 class BusinessCustomerStatsView(viewsets.ViewSet):
@@ -1003,7 +1037,10 @@ class BusinessCustomerStatsView(viewsets.ViewSet):
                     error_code="NO_DEFAULT_BUSINESS",
                     extra_data={"user_id": user.id}
                 )
-                return Response({"error": "No default business found."}, status=HTTP_400_BAD_REQUEST)
+                return Response(
+                    {"error": "No default business found."},
+                    status=HTTP_400_BAD_REQUEST,
+                )
 
             stats = get_customer_statistics(business)
              # Set success attributes using the current span
@@ -1035,7 +1072,10 @@ class BusinessCustomerStatsView(viewsets.ViewSet):
                     "user_id": str(request.user.id),
                 },
             )
-            return Response({"error": f"Unexpected error creating customer statistics: {str(e)}"}, status=HTTP_400_BAD_REQUEST)
+            return Response(
+                {"error": f"Unexpected error creating customer statistics: {str(e)}"},
+                status=HTTP_400_BAD_REQUEST,
+            )
 
 
 class BusinessProductStatsView(viewsets.ViewSet):
@@ -1069,7 +1109,10 @@ class BusinessProductStatsView(viewsets.ViewSet):
                     error_code="NO_DEFAULT_BUSINESS",
                     extra_data={"user_id": user.id}
                 )
-                return Response({"error": "No default business found."}, status=HTTP_400_BAD_REQUEST)
+                return Response(
+                    {"error": "No default business found."},
+                    status=HTTP_400_BAD_REQUEST,
+                )
 
             stats = get_product_statistics(business)
              # Set success attributes using the current span
@@ -1101,7 +1144,10 @@ class BusinessProductStatsView(viewsets.ViewSet):
                     "user_id": str(request.user.id),
                 },
             )
-            return Response({"error": f"Unexpected error creating product statistics: {str(e)}"}, status=HTTP_400_BAD_REQUEST)
+            return Response(
+                {"error": f"Unexpected error creating product statistics: {str(e)}"},
+                status=HTTP_400_BAD_REQUEST,
+            )
 
 
 class BusinessOrderStatsView(viewsets.ViewSet):
@@ -1135,7 +1181,10 @@ class BusinessOrderStatsView(viewsets.ViewSet):
                     error_code="NO_DEFAULT_BUSINESS",
                     extra_data={"user_id": user.id}
                 )
-                return Response({"error": "No default business found."}, status=HTTP_400_BAD_REQUEST)
+                return Response(
+                    {"error": "No default business found."},
+                    status=HTTP_400_BAD_REQUEST,
+                )
 
             stats = get_order_statistics(business)
              # Set success attributes using the current span
@@ -1167,4 +1216,7 @@ class BusinessOrderStatsView(viewsets.ViewSet):
                     "user_id": str(request.user.id),
                 },
             )
-            return Response({"error": f"Unexpected error creating order statistics: {str(e)}"}, status=HTTP_400_BAD_REQUEST)
+            return Response(
+                {"error": f"Unexpected error creating order statistics: {str(e)}"},
+                status=HTTP_400_BAD_REQUEST,
+            )
