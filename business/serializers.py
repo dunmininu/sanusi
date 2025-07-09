@@ -108,6 +108,9 @@ class BusinessSerializer(serializers.ModelSerializer):
         fields = [
             "name",
             "id",
+            "address",
+            "email",
+            "phone_number",
             "escalation_departments",
             "reply_instructions",
             "knowledge_base",
@@ -358,6 +361,7 @@ class OrderSerializer(serializers.ModelSerializer):
     order_products_data = serializers.ListField(
         child=serializers.DictField(), write_only=True, required=False
     )
+    business = BusinessSerializer(read_only=True)  # Complete business details
 
     class Meta:
         model = Order
