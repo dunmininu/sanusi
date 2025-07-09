@@ -1,11 +1,18 @@
 import html
 import json
 import logging
-import ast
-from typing import List, Tuple
 
+from typing import List, Tuple
 from sanusi.views import generate_response_chat
 from sanusi.utils import save_chat_and_message
+from auto_agent import (
+    AgentManager,
+    ResponseAgent,
+    EscalationAgent,
+    SentimentAgent,
+    SeverityAgent,
+    ChatContextAgent,
+)
 
 from .models import Chat, Message, Customer
 from django.shortcuts import get_object_or_404
@@ -32,6 +39,27 @@ class AutoResponseService:
 
     def __init__(self, business):
         self.business = business
+        self.manager = AgentManager()
+        self.manager.register(
+            "response",
+            ResponseAgent(response_instructions_chat),
+        )
+        self.manager.register(
+            "escalation",
+            EscalationAgent(escalation_instructions),
+        )
+        self.manager.register(
+            "sentiment",
+            SentimentAgent(sentiment_analysis),
+        )
+        self.manager.register(
+            "severity",
+            SeverityAgent(severity_instructions),
+        )
+        self.manager.register(
+            "context",
+            ChatContextAgent(chat_context_instructions),
+        )
 
     # Internal helpers -----------------------------------------------------
     def get_knowledge_base_contents(self) -> List[str]:
@@ -205,44 +233,40 @@ class AutoResponseService:
     ) -> dict:
         """Generate auto response for ``chat_v2`` channel."""
         kb_contents = self.get_knowledge_base_contents()
-        _, _, last_message = self.history(chat)
+        sanusi_response_str, content_str, _ = self.history(chat)
 
-        prompt = [
-            {
-                "role": "system",
-                "content": f"response_instructions: {response_instructions_chat}",
-            },
-            {"role": "system", "content": f"knowledge base to answer from: {kb_contents}"},
-            {
-                "role": "system",
-                "content": (
-                    f"User's previous messages for reflection: {[m.content for m in last_message] if last_message else ''} and your last response was: {[m.sanusi_response for m in last_message] if last_message else ''} and user's name is {customer_name}"
-                ),
-            },
-            {"role": "user", "content": message},
-        ]
+        response_text = self.manager.run(
+            "response",
+            message=message,
+            knowledge_base=kb_contents,
+            history=content_str,
+            customer_name=customer_name,
+        )
 
-        answer = generate_response_chat(prompt, 300)["choices"][0]["message"]["content"]
-        response_json = None
-        max_retry_attempts = 3
-        for attempt in range(max_retry_attempts):
-            try:
-                response_json = json.loads(answer)
-                break
-            except json.JSONDecodeError:
-                try:
-                    response_json = ast.literal_eval(answer)
-                    break
-                except (ValueError, SyntaxError):
-                    if attempt < max_retry_attempts - 1:
-                        prompt[0][
-                            "content"
-                        ] += "\nRemember to adhere strictly to the response instructions provided. an assistant is supposed to listen to instructions"
-                    else:
-                        logger.error(
-                            "The assistant's response could not be parsed as JSON or a Python dictionary string."
-                        )
-                        response_json = {"response": answer}
+        escalation_department = self.manager.run("escalation", message=message)
+        sentiment = self.manager.run("sentiment", message=message)
+        severity = self.manager.run("severity", message=message)
+        context = self.manager.run(
+            "context",
+            sanusi_response=sanusi_response_str,
+            content=content_str,
+            message=message,
+        )
+
+        response_json = {
+            "response": self.html_format(response_text),
+            "escalate_issue": escalation_department in [
+                "sales",
+                "operations",
+                "billing",
+                "engineering",
+                "support",
+            ],
+            "escalation_department": escalation_department,
+            "severity": severity,
+            "sentiment": sentiment,
+            "chat_context": context,
+        }
 
         save_chat_and_message(chat, sender, message, response_json, channel)
         return response_json
