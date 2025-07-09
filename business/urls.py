@@ -6,6 +6,9 @@ from .views import (
     InventoryViewSet,
     CategoryViewSet,
     OrderViewSet,
+    BusinessCustomerStatsView,
+    BusinessProductStatsView,
+    BusinessOrderStatsView,
 )
 
 router = routers.DefaultRouter()
@@ -34,4 +37,22 @@ router.register(
     r"(?P<company_id>[^/]+)/order", 
     OrderViewSet, 
     basename="order"
+)
+
+router.register(
+    r"(?P<company_id>[^/]+)/statistics", 
+    BusinessCustomerStatsView, 
+    basename="business_customer_statistics"
+)
+
+router.register(
+    r"(?P<company_id>[^/]+)/statistics", 
+    BusinessProductStatsView, 
+    basename="business_product_statistics"
+)
+
+router.register(
+    r"(?P<company_id>[^/]+)/statistics", 
+    BusinessOrderStatsView, 
+    basename="business_order_statistics"
 )

@@ -22,6 +22,7 @@ class ProductStatusChoices(models.TextChoices):
     OUT_OF_STOCK = "OUT_OF_STOCK"
     UNAVAILABLE = "UNAVAILABLE"
     IN_ACTIVE = "IN_ACTIVE"
+    LOW_IN_STOCK = "LOW_IN_STOCK"
 
 
 CANCELLED = "CANCELLED"

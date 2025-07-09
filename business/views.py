@@ -10,6 +10,7 @@ from loguru import logger
 from rest_framework import mixins, filters, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
+from rest_framework.views import APIView
 from rest_framework.exceptions import ValidationError
 from rest_framework.permissions import IsAuthenticated
 from drf_yasg.utils import swagger_auto_schema, no_body
@@ -33,6 +34,7 @@ from .serializers import (
     OrderSerializer,
 )
 from sanusi_backend.classes.custom import CustomPagination, BaseSearchFilter
+from analytics.services.statistics import get_customer_statistics, get_product_statistics, get_order_statistics
 
 
 class BusinessApiViewSet(viewsets.ModelViewSet):
@@ -95,6 +97,7 @@ class BusinessApiViewSet(viewsets.ModelViewSet):
                     "user_id": str(request.user.id),
                 },
             )
+            return Response({"error": f"Unexpected error creating business: {str(e)}"}, status=HTTP_400_BAD_REQUEST)
 
     @swagger_auto_schema(
         manual_parameters=[
@@ -156,7 +159,7 @@ class BusinessApiViewSet(viewsets.ModelViewSet):
                 business_id=str(serializer.instance.id),
                 user_id=str(request.user.id)
             )
-            return Response(serializer.data)
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
         except Exception as e:
             # Handle unexpected exceptions
             ErrorHandler.log_and_raise(
@@ -170,6 +173,7 @@ class BusinessApiViewSet(viewsets.ModelViewSet):
                     "user_id": str(request.user.id),
                 },
             )
+            return Response({"error": f"Unexpected error update business: {str(e)}"}, status=HTTP_400_BAD_REQUEST)
 
     def list(self, request, *args, **kwargs):
         return super().list(request, *args, **kwargs)
@@ -518,6 +522,8 @@ class InventoryViewSet(
                     "user_id": str(request.user.id),
                 },
             )
+            return Response({"error": f"Unexpected error creating product: {str(e)}"}, status=HTTP_400_BAD_REQUEST)
+            
 
     @transaction.atomic
     @with_telemetry(span_name="update_product")
@@ -568,7 +574,7 @@ class InventoryViewSet(
         except Exception as e:
             # Handle unexpected exceptions
             ErrorHandler.log_and_raise(
-                message=f"Unexpected error update product: {str(e)}",
+                message=f"Unexpected error updating product: {str(e)}",
                 exception_class=LogicException,
                 error_code="UNEXPECTED_ERROR",
                 status_code=500,
@@ -578,6 +584,7 @@ class InventoryViewSet(
                     "user_id": str(request.user.id),
                 },
             )
+            return Response({"error": f"Unexpected error updating product: {str(e)}"}, status=HTTP_400_BAD_REQUEST)
 
 
 class CategoryViewSet(
@@ -699,6 +706,7 @@ class CategoryViewSet(
                     "user_id": str(request.user.id),
                 },
             )
+            return Response({"error": f"Unexpected error creating category: {str(e)}"}, status=HTTP_400_BAD_REQUEST)
 
     @transaction.atomic
     @with_telemetry(span_name="update_category")
@@ -754,6 +762,7 @@ class CategoryViewSet(
                     "user_id": str(request.user.id),
                 },
             )
+            return Response({"error": f"Unexpected error update category: {str(e)}"}, status=HTTP_400_BAD_REQUEST)
 
 
 # For Order model
@@ -896,6 +905,7 @@ class OrderViewSet(
                     "user_id": str(request.user.id),
                 },
             )
+            return Response({"error": f"Unexpected error creating order: {str(e)}"}, status=HTTP_400_BAD_REQUEST)
 
     @transaction.atomic
     @with_telemetry(span_name="update_order")
@@ -959,3 +969,202 @@ class OrderViewSet(
                     "user_id": str(request.user.id),
                 },
             )
+            return Response({"error": f"Unexpected error updating order: {str(e)}"}, status=HTTP_400_BAD_REQUEST)
+            
+
+class BusinessCustomerStatsView(viewsets.ViewSet):
+    permission_classes = [IsAuthenticated]
+
+    @with_telemetry(span_name="customer_statistics")
+    @action(detail=False, methods=["get"], url_path="customer_statistics")
+    def customer_statistics(self, request, *args, current_span=None, **kwargs):
+        try:
+            # Log sensitive data carefully - avoid logging passwords, tokens, etc.
+            safe_data = {
+                k: v
+                for k, v in request.data.items()
+                if k not in ["password", "token", "secret", "key", "access", "refresh"]
+            }
+
+            # Log request start
+            logger.info(
+                "customer statistics",
+                user_id=str(request.user.id),
+                user_email=request.user.email,
+                data_keys=list(safe_data.keys()),
+            )
+            user = request.user
+            business = user.get_default_business()
+
+            if not business:
+                ErrorHandler.validation_error(
+                    message="User does not have a business.",
+                    field="business_id", 
+                    error_code="NO_DEFAULT_BUSINESS",
+                    extra_data={"user_id": user.id}
+                )
+                return Response({"error": "No default business found."}, status=HTTP_400_BAD_REQUEST)
+
+            stats = get_customer_statistics(business)
+             # Set success attributes using the current span
+            if current_span:
+                current_span.set_attributes(
+                    {
+                        "statistic": stats,
+                        "operation.success": True,
+                    }
+                )
+
+            # Log success
+            logger.info(
+                "customer statistics successfully",
+                business=business,
+                user_id=str(request.user.id),
+            )
+            return Response(stats, status=status.HTTP_200_OK)
+        except Exception as e:
+            # Handle unexpected exceptions
+            ErrorHandler.log_and_raise(
+                message=f"Unexpected error creating customer statistics: {str(e)}",
+                exception_class=LogicException,
+                error_code="UNEXPECTED_ERROR",
+                status_code=500,
+                log_level="critical",
+                extra_data={
+                    "exception_type": type(e).__name__,
+                    "user_id": str(request.user.id),
+                },
+            )
+            return Response({"error": f"Unexpected error creating customer statistics: {str(e)}"}, status=HTTP_400_BAD_REQUEST)
+
+
+class BusinessProductStatsView(viewsets.ViewSet):
+    permission_classes = [IsAuthenticated]
+
+    @with_telemetry(span_name="product_statistics")
+    @action(detail=False, methods=["get"], url_path="product_statistics")
+    def product_statistics(self, request, *args, current_span=None, **kwargs):
+        try:
+            # Log sensitive data carefully - avoid logging passwords, tokens, etc.
+            safe_data = {
+                k: v
+                for k, v in request.data.items()
+                if k not in ["password", "token", "secret", "key", "access", "refresh"]
+            }
+
+            # Log request start
+            logger.info(
+                "product statistics",
+                user_id=str(request.user.id),
+                user_email=request.user.email,
+                data_keys=list(safe_data.keys()),
+            )
+            user = request.user
+            business = user.get_default_business()
+
+            if not business:
+                ErrorHandler.validation_error(
+                    message="User does not have a business.",
+                    field="business_id", 
+                    error_code="NO_DEFAULT_BUSINESS",
+                    extra_data={"user_id": user.id}
+                )
+                return Response({"error": "No default business found."}, status=HTTP_400_BAD_REQUEST)
+
+            stats = get_product_statistics(business)
+             # Set success attributes using the current span
+            if current_span:
+                current_span.set_attributes(
+                    {
+                        "statistic": stats,
+                        "operation.success": True,
+                    }
+                )
+
+            # Log success
+            logger.info(
+                "product statistics successfully",
+                business=business,
+                user_id=str(request.user.id),
+            )
+            return Response(stats, status=status.HTTP_200_OK)
+        except Exception as e:
+            # Handle unexpected exceptions
+            ErrorHandler.log_and_raise(
+                message=f"Unexpected error creating product statistics: {str(e)}",
+                exception_class=LogicException,
+                error_code="UNEXPECTED_ERROR",
+                status_code=500,
+                log_level="critical",
+                extra_data={
+                    "exception_type": type(e).__name__,
+                    "user_id": str(request.user.id),
+                },
+            )
+            return Response({"error": f"Unexpected error creating product statistics: {str(e)}"}, status=HTTP_400_BAD_REQUEST)
+
+
+class BusinessOrderStatsView(viewsets.ViewSet):
+    permission_classes = [IsAuthenticated]
+
+    @with_telemetry(span_name="order_statistics")
+    @action(detail=False, methods=["get"], url_path="order_statistics")
+    def order_statistics(self, request, *args, current_span=None, **kwargs):
+        try:
+            # Log sensitive data carefully - avoid logging passwords, tokens, etc.
+            safe_data = {
+                k: v
+                for k, v in request.data.items()
+                if k not in ["password", "token", "secret", "key", "access", "refresh"]
+            }
+
+            # Log request start
+            logger.info(
+                "order statistics",
+                user_id=str(request.user.id),
+                user_email=request.user.email,
+                data_keys=list(safe_data.keys()),
+            )
+            user = request.user
+            business = user.get_default_business()
+
+            if not business:
+                ErrorHandler.validation_error(
+                    message="User does not have a business.",
+                    field="business_id", 
+                    error_code="NO_DEFAULT_BUSINESS",
+                    extra_data={"user_id": user.id}
+                )
+                return Response({"error": "No default business found."}, status=HTTP_400_BAD_REQUEST)
+
+            stats = get_order_statistics(business)
+             # Set success attributes using the current span
+            if current_span:
+                current_span.set_attributes(
+                    {
+                        "statistic": stats,
+                        "operation.success": True,
+                    }
+                )
+
+            # Log success
+            logger.info(
+                "order statistics successfully",
+                business=business,
+                user_id=str(request.user.id),
+            )
+            return Response(stats, status=status.HTTP_200_OK)
+        except Exception as e:
+            # Handle unexpected exceptions
+            ErrorHandler.log_and_raise(
+                message=f"Unexpected error creating order statistics: {str(e)}",
+                exception_class=LogicException,
+                error_code="UNEXPECTED_ERROR",
+                status_code=500,
+                log_level="critical",
+                extra_data={
+                    "exception_type": type(e).__name__,
+                    "user_id": str(request.user.id),
+                },
+            )
+            return Response({"error": f"Unexpected error creating order statistics: {str(e)}"}, status=HTTP_400_BAD_REQUEST)
