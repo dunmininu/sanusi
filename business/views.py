@@ -976,7 +976,7 @@ class BusinessCustomerStatsView(viewsets.ViewSet):
     permission_classes = [IsAuthenticated]
 
     @with_telemetry(span_name="customer_statistics")
-    @action(detail=False, methods=["get"], url_path="customer_statistics")
+    @action(detail=False, methods=["get"], url_path="customer-statistics")
     def customer_statistics(self, request, *args, current_span=None, **kwargs):
         try:
             # Log sensitive data carefully - avoid logging passwords, tokens, etc.
@@ -1042,7 +1042,7 @@ class BusinessProductStatsView(viewsets.ViewSet):
     permission_classes = [IsAuthenticated]
 
     @with_telemetry(span_name="product_statistics")
-    @action(detail=False, methods=["get"], url_path="product_statistics")
+    @action(detail=False, methods=["get"], url_path="product-statistics")
     def product_statistics(self, request, *args, current_span=None, **kwargs):
         try:
             # Log sensitive data carefully - avoid logging passwords, tokens, etc.
@@ -1108,7 +1108,7 @@ class BusinessOrderStatsView(viewsets.ViewSet):
     permission_classes = [IsAuthenticated]
 
     @with_telemetry(span_name="order_statistics")
-    @action(detail=False, methods=["get"], url_path="order_statistics")
+    @action(detail=False, methods=["get"], url_path="order-statistics")
     def order_statistics(self, request, *args, current_span=None, **kwargs):
         try:
             # Log sensitive data carefully - avoid logging passwords, tokens, etc.
