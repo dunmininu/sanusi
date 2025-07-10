@@ -2,7 +2,7 @@ import html
 import json
 import logging
 
-from typing import List, Tuple
+from typing import List, Tuple, Optional
 from sanusi.views import generate_response_chat
 from sanusi.utils import save_chat_and_message
 from auto_agent import (
@@ -91,9 +91,9 @@ class AutoResponseService:
         self,
         channel: str,
         chat_identifier: str,
-        customer_identifier: str | None = None,
-        customer_name: str | None = None,
-        customer_email: str | None = None,
+        customer_identifier: Optional[str] = None,
+        customer_name: Optional[str] = None,
+        customer_email: Optional[str] = None,
     ) -> Chat:
         """Retrieve or create :class:`Chat` and optional :class:`Customer`."""
         if channel in {"email_v1", "email_v2", "email"}:
