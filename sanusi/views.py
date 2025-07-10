@@ -2,6 +2,7 @@
 # import json
 # import ast
 import time
+from functools import lru_cache
 
 from django.views.decorators.csrf import csrf_exempt
 from django.conf import settings
@@ -13,8 +14,7 @@ from rest_framework.response import Response
 from rest_framework.decorators import api_view
 from rest_framework import status, serializers, generics, mixins
 
-import openai
-from llama_index import LLMPredictor, PromptHelper, GPTVectorStoreIndex
+# import openai
 from langchain import OpenAI as oai
 
 from chat.models import Message
@@ -29,10 +29,18 @@ from .serializers import (
 from business.private.models import KnowledgeBase
 
 # Create your views here.
-openai.api_key = settings.OPENAI_KEY
+# openai.api_key = settings.OPENAI_KEY
 
+@lru_cache(maxsize=1)
+def get_openai():
+    import openai
+    openai.api_key = settings.OPENAI_KEY
+    return openai
 
 def construct_index(knowledge_base):
+    from langchain import OpenAI as oai
+    from llama_index import LLMPredictor, PromptHelper, GPTVectorStoreIndex
+
     max_input_size = 4096
     num_outputs = 256
     max_chunk_overlap = 0.2
@@ -64,6 +72,7 @@ def construct_index(knowledge_base):
 
 
 def generate_response_chat(prompt, max_tokens):
+    openai = get_openai()
     response = None
     retries = 0
     while retries < 3:
@@ -90,6 +99,7 @@ def generate_response_chat(prompt, max_tokens):
 
 
 def generate_response_chat_v2(prompt):
+    openai = get_openai()
     field_prompts = [
         "Please provide a well-structured response based on the knowledge base provided. "
         "Do not instruct the user to send any emails or make any phone calls. Your sole "
@@ -137,6 +147,7 @@ def generate_response_chat_v2(prompt):
 
 
 def generate_response_email(prompt):
+    openai = get_openai()
     response = None
     retries = 0
     prompt_text = ", ".join([i for i in prompt])
@@ -165,6 +176,7 @@ def generate_response_email(prompt):
 
 
 def generate_response_email_v2(prompt):
+    openai = get_openai()
     field_prompts = [
         "Please provide a well-structured response that could fit "
         "into an email body and would have a closing remark. Do not instruct "
@@ -225,6 +237,7 @@ def generate_response_email_v2(prompt):
 
 
 def generate_response(prompt, tokens=200, temperature=0.5):
+    openai = get_openai()
     """
     This function uses OpenAI's GPT-3 to generate a response based on a given prompt.
 
