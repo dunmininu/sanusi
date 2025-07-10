@@ -6,7 +6,12 @@ from .agents import (
     SentimentAgent,
     SeverityAgent,
     ChatContextAgent,
+    DatabaseQueryAgent,
+    DynamicDatabaseQueryAgent,
+    APICallAgent,
+    AccountAuditAgent,
 )
+from .autogen_agents import AutogenAgents, initialize_autogen_agents
 
 __all__ = [
     "AgentManager",
@@ -16,4 +21,10 @@ __all__ = [
     "SentimentAgent",
     "SeverityAgent",
     "ChatContextAgent",
+    "DatabaseQueryAgent",
+    "DynamicDatabaseQueryAgent",
+    "APICallAgent",
+    "AccountAuditAgent",
+    "AutogenAgents",
+    "initialize_autogen_agents",
 ]
