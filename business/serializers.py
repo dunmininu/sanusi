@@ -114,6 +114,7 @@ class BusinessSerializer(serializers.ModelSerializer):
             "escalation_departments",
             "reply_instructions",
             "knowledge_base",
+            "business_type",
         ]
         read_only_fields = ["id"]
 

@@ -11,6 +11,16 @@ from decimal import Decimal
 
 
 class BusinessTypeChoices(models.TextChoices):
+    FASHION = "fashion"
+    SKINCARE = "skincare"
+    FOOD = "food"
+    ELECTRONICS = "electronics"
+    HOME = "home"
+    BEAUTY = "beauty"
+    KIDS = "kids"
+    SPORTS = "sports"
+    CRAFTS = "crafts"
+    OTHER = "other"
     ECOMMERCE = "ecommerce"
     FINANCE = "finance"
     MEDICAL = "medical"
