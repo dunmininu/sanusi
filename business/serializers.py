@@ -162,11 +162,21 @@ class BusinessSerializer(serializers.ModelSerializer):
 
     def update(self, instance, validated_data):
         escalation_departments_data = validated_data.pop("escalation_departments", None)
-        instance.name = validated_data.get("name", instance.name)
-        instance.email = validated_data.get("email", instance.email)
-        instance.reply_instructions = validated_data.get(
-            "reply_instructions", instance.reply_instructions
-        )
+    
+        # Only update fields that were actually sent in the request
+        if "name" in validated_data:
+            instance.name = validated_data["name"]
+        if "email" in validated_data:
+            instance.email = validated_data["email"]
+        if "business_type" in validated_data:
+            instance.business_type = validated_data["business_type"]
+        if "phone_number" in validated_data:
+            instance.phone_number = validated_data["phone_number"]
+        if "address" in validated_data:
+            instance.address = validated_data["address"]
+        if "reply_instructions" in validated_data:
+            instance.reply_instructions = validated_data["reply_instructions"]
+        
         instance.save()
 
         if escalation_departments_data is not None:

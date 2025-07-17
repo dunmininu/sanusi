@@ -147,7 +147,7 @@ class BusinessApiViewSet(viewsets.ModelViewSet):
                 user_email=request.user.email,
                 data_keys=list(safe_data.keys()),
             )
-            partial = kwargs.pop("partial", False)
+            partial = kwargs.pop("partial", True)
             instance = self.get_object()
             serializer = self.get_serializer(instance, data=request.data, partial=partial)
             serializer.is_valid(raise_exception=True)
@@ -166,7 +166,7 @@ class BusinessApiViewSet(viewsets.ModelViewSet):
                 business_id=str(serializer.instance.id),
                 user_id=str(request.user.id)
             )
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
+            return Response(serializer.data, status=status.HTTP_200_OK)
         except Exception as e:
             # Handle unexpected exceptions
             ErrorHandler.log_and_raise(
@@ -416,7 +416,7 @@ ProductFilter.add_relation_filter(
     lookup_expr='exact', 
     filter_class=NumberFilter
 )
-# ProductFilter.add_relation_filter('category__name', 'category__name')
+ProductFilter.add_relation_filter('category__name', 'category__name')
 ProductFilter.add_relation_filter('serial_number', 'serial_number')
 
 
@@ -447,8 +447,8 @@ class InventoryViewSet(
         filters.OrderingFilter,
     ]
     filterset_class = ProductFilter
-    search_fields = ['name', 'serial_number']
-    ordering_fields = ['date_created', 'last_updated', 'name', 'serial_number']
+    search_fields = ['name', 'serial_number', 'category__name', 'category__id']
+    ordering_fields = ['date_created', 'last_updated', 'name', 'serial_number', 'category__name']
     ordering = ['-date_created']  # Default ordering
     pagination_class = CustomPagination
 

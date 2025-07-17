@@ -34,6 +34,8 @@ class User(AbstractBaseUser, PermissionsMixin):
     date_joined = models.DateTimeField(auto_now_add=True)
     is_active = models.BooleanField(default=True)
     password_reset_otp_secret = models.CharField(max_length=32, blank=True)
+    complete_on_boarding = models.BooleanField(default=False)
+    step = models.IntegerField(default=0)
 
     # Reference to one or more businesses
     businesses = models.ManyToManyField(
@@ -48,6 +50,9 @@ class User(AbstractBaseUser, PermissionsMixin):
 
     # Use the custom manager for this model
     objects = UserManager()
+
+    # Onboarding constants
+    TOTAL_ONBOARDING_STEPS = 7
 
     class Meta:
         # Specify the default ordering for user queries
@@ -85,6 +90,109 @@ class User(AbstractBaseUser, PermissionsMixin):
         if business in self.businesses.all():
             self.settings['default_business'] = str(business.id)
             self.save(update_fields=['settings'])
+
+    def update_onboarding_step(self, step_number):
+        """
+        Update the user's onboarding step and check if onboarding is complete
+        
+        Args:
+            step_number (int): The step number to update to (1-7)
+        
+        Returns:
+            bool: True if onboarding is now complete, False otherwise
+        """
+        if not isinstance(step_number, int) or step_number < 0:
+            raise ValueError("Step number must be a positive integer")
+        
+        if step_number > self.TOTAL_ONBOARDING_STEPS:
+            raise ValueError(f"Step number cannot exceed {self.TOTAL_ONBOARDING_STEPS}")
+        
+        # Update the step only if it's moving forward
+        if step_number > self.step:
+            self.step = step_number
+            
+            # Check if onboarding is complete
+            if self.step >= self.TOTAL_ONBOARDING_STEPS:
+                self.complete_on_boarding = True
+            
+            # Save the changes
+            self.save(update_fields=['step', 'complete_on_boarding'])
+            
+            return self.complete_on_boarding
+        
+        return False
+
+    def next_onboarding_step(self):
+        """
+        Move to the next onboarding step
+        
+        Returns:
+            bool: True if onboarding is now complete, False otherwise
+        """
+        return self.update_onboarding_step(self.step + 1)
+
+    def get_onboarding_progress(self):
+        """
+        Get the current onboarding progress
+        
+        Returns:
+            dict: Dictionary containing progress information
+        """
+        return {
+            'current_step': self.step,
+            'total_steps': self.TOTAL_ONBOARDING_STEPS,
+            'progress_percentage': (self.step / self.TOTAL_ONBOARDING_STEPS) * 100,
+            'is_complete': self.complete_on_boarding,
+            'remaining_steps': max(0, self.TOTAL_ONBOARDING_STEPS - self.step)
+        }
+
+    def reset_onboarding(self):
+        """
+        Reset the user's onboarding progress
+        """
+        self.step = 0
+        self.complete_on_boarding = False
+        self.save(update_fields=['step', 'complete_on_boarding'])
+
+    def is_onboarding_complete(self):
+        """
+        Check if the user has completed onboarding
+        
+        Returns:
+            bool: True if onboarding is complete, False otherwise
+        """
+        return self.complete_on_boarding
+
+    @property
+    def onboarding_completion_percentage(self):
+        """
+        Property to get onboarding completion percentage
+        
+        Returns:
+            float: Completion percentage (0-100)
+        """
+        return (self.step / self.TOTAL_ONBOARDING_STEPS) * 100
+
+    def user_on_boarding(self):
+        """
+        Helper method for user onboarding - returns current progress
+        
+        Returns:
+            dict: Current onboarding progress
+        """
+        return self.get_onboarding_progress()
+
+    def save(self, *args, **kwargs):
+        """
+        Override save method to ensure onboarding completion is properly tracked
+        """
+        # Auto-complete onboarding if step reaches the total
+        if self.step >= self.TOTAL_ONBOARDING_STEPS:
+            self.complete_on_boarding = True
+        
+        super().save(*args, **kwargs)
+        
+
 
     # Define related_name for groups and user_permissions
 

@@ -6,11 +6,13 @@ from accounts.serializers import (
     LoginSerializer,
     RegisterSerializer,
     UserSerializer,
+    OnboardingUpdateSerializer,
 )
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.db import transaction
+from rest_framework.permissions import IsAuthenticated
 
 
 # Create your views here.
@@ -91,6 +93,19 @@ class AuthenticationViewSet(viewsets.GenericViewSet):
                                         ),
                                     },
                                 ),
+                                "step": openapi.Schema(type=openapi.TYPE_INTEGER),
+                                "complete_on_boarding": openapi.Schema(type=openapi.TYPE_BOOLEAN),
+                                "onboarding_progress": openapi.Schema(
+                                    type=openapi.TYPE_OBJECT,
+                                    properties={
+                                        "current_step": openapi.Schema(type=openapi.TYPE_INTEGER),
+                                        "total_steps": openapi.Schema(type=openapi.TYPE_INTEGER),
+                                        "progress_percentage": openapi.Schema(type=openapi.TYPE_NUMBER),
+                                        "is_complete": openapi.Schema(type=openapi.TYPE_BOOLEAN),
+                                        "remaining_steps": openapi.Schema(type=openapi.TYPE_INTEGER),
+                                    },
+                                ),
+                                "onboarding_completion_percentage": openapi.Schema(type=openapi.TYPE_NUMBER),
                             },
                         ),
                     },
@@ -218,3 +233,146 @@ class AuthenticationViewSet(viewsets.GenericViewSet):
             return Response(
                 {"error": "Invalid refresh token"}, status=status.HTTP_401_UNAUTHORIZED
             )
+        
+    @swagger_auto_schema(
+    operation_description="Get user onboarding progress",
+    responses={
+        200: openapi.Response(
+            description="Onboarding progress retrieved successfully",
+            schema=openapi.Schema(
+                type=openapi.TYPE_OBJECT,
+                properties={
+                    "current_step": openapi.Schema(type=openapi.TYPE_INTEGER),
+                    "total_steps": openapi.Schema(type=openapi.TYPE_INTEGER),
+                    "progress_percentage": openapi.Schema(type=openapi.TYPE_NUMBER),
+                    "is_complete": openapi.Schema(type=openapi.TYPE_BOOLEAN),
+                    "remaining_steps": openapi.Schema(type=openapi.TYPE_INTEGER),
+                },
+            ),
+        ),
+        401: openapi.Response(description="Unauthorized"),
+    },
+    )
+    @action(detail=False, methods=["get"], permission_classes=[IsAuthenticated])
+    def onboarding_progress(self, request):
+        """Get current user's onboarding progress"""
+        user = request.user
+        progress = user.get_onboarding_progress()
+        
+        return Response(progress, status=status.HTTP_200_OK)
+
+    @swagger_auto_schema(
+    operation_description="Update user onboarding step",
+    request_body=OnboardingUpdateSerializer,
+    responses={
+        200: openapi.Response(
+            description="Onboarding step updated successfully",
+            schema=openapi.Schema(
+                type=openapi.TYPE_OBJECT,
+                properties={
+                    "message": openapi.Schema(type=openapi.TYPE_STRING),
+                    "current_step": openapi.Schema(type=openapi.TYPE_INTEGER),
+                    "is_complete": openapi.Schema(type=openapi.TYPE_BOOLEAN),
+                    "progress": openapi.Schema(
+                        type=openapi.TYPE_OBJECT,
+                        properties={
+                            "current_step": openapi.Schema(type=openapi.TYPE_INTEGER),
+                            "total_steps": openapi.Schema(type=openapi.TYPE_INTEGER),
+                            "progress_percentage": openapi.Schema(type=openapi.TYPE_NUMBER),
+                            "is_complete": openapi.Schema(type=openapi.TYPE_BOOLEAN),
+                            "remaining_steps": openapi.Schema(type=openapi.TYPE_INTEGER),
+                        },
+                    ),
+                },
+            ),
+        ),
+        400: openapi.Response(description="Bad request"),
+        401: openapi.Response(description="Unauthorized"),
+    },
+    )
+    @action(detail=False, methods=["post"], permission_classes=[IsAuthenticated])
+    def update_onboarding_step(self, request):
+        """Update user's onboarding step"""
+        serializer = OnboardingUpdateSerializer(data=request.data)
+        
+        if serializer.is_valid():
+            step = serializer.validated_data["step"]
+            user = request.user
+            
+            try:
+                is_complete = user.update_onboarding_step(step)
+                progress = user.get_onboarding_progress()
+                
+                message = "Onboarding completed!" if is_complete else f"Step {step} completed successfully"
+                
+                return Response(
+                    {
+                        "message": message,
+                        "current_step": user.step,
+                        "is_complete": is_complete,
+                        "progress": progress,
+                    },
+                    status=status.HTTP_200_OK,
+                )
+                
+            except ValueError as e:
+                return Response(
+                    {"error": str(e)},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+        
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        
+    @swagger_auto_schema(
+    operation_description="Move to next onboarding step",
+    responses={
+        200: openapi.Response(
+            description="Moved to next onboarding step successfully",
+            schema=openapi.Schema(
+                type=openapi.TYPE_OBJECT,
+                properties={
+                    "message": openapi.Schema(type=openapi.TYPE_STRING),
+                    "current_step": openapi.Schema(type=openapi.TYPE_INTEGER),
+                    "is_complete": openapi.Schema(type=openapi.TYPE_BOOLEAN),
+                    "progress": openapi.Schema(
+                        type=openapi.TYPE_OBJECT,
+                        properties={
+                            "current_step": openapi.Schema(type=openapi.TYPE_INTEGER),
+                            "total_steps": openapi.Schema(type=openapi.TYPE_INTEGER),
+                            "progress_percentage": openapi.Schema(type=openapi.TYPE_NUMBER),
+                            "is_complete": openapi.Schema(type=openapi.TYPE_BOOLEAN),
+                            "remaining_steps": openapi.Schema(type=openapi.TYPE_INTEGER),
+                        },
+                    ),
+                },
+            ),
+        ),
+        400: openapi.Response(description="Bad request - already at max step"),
+        401: openapi.Response(description="Unauthorized"),
+    },
+)
+    @action(detail=False, methods=["post"], permission_classes=[IsAuthenticated])
+    def next_onboarding_step(self, request):
+        """Move user to next onboarding step"""
+        user = request.user
+        
+        if user.step >= user.TOTAL_ONBOARDING_STEPS:
+            return Response(
+                {"error": "User has already completed all onboarding steps"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        
+        is_complete = user.next_onboarding_step()
+        progress = user.get_onboarding_progress()
+        
+        message = "Onboarding completed!" if is_complete else f"Moved to step {user.step}"
+        
+        return Response(
+            {
+                "message": message,
+                "current_step": user.step,
+                "is_complete": is_complete,
+                "progress": progress,
+            },
+            status=status.HTTP_200_OK,
+        )
