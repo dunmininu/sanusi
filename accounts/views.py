@@ -13,6 +13,9 @@ from drf_yasg import openapi
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.db import transaction
 from rest_framework.permissions import IsAuthenticated
+from loguru import logger
+from sanusi_backend.decorators.telemetry import with_telemetry
+from sanusi_backend.utils.error_handler import ErrorHandler, LogicException
 
 
 # Create your views here.
@@ -291,37 +294,85 @@ class AuthenticationViewSet(viewsets.GenericViewSet):
     },
     )
     @action(detail=False, methods=["post"], permission_classes=[IsAuthenticated])
-    def update_onboarding_step(self, request):
+    @with_telemetry(span_name="update_onboarding_step")
+    def update_onboarding_step(self, request, *args, current_span=None, **kwargs):
         """Update user's onboarding step"""
         serializer = OnboardingUpdateSerializer(data=request.data)
-        
-        if serializer.is_valid():
-            step = serializer.validated_data["step"]
-            user = request.user
-            
-            try:
-                is_complete = user.update_onboarding_step(step)
-                progress = user.get_onboarding_progress()
-                
-                message = "Onboarding completed!" if is_complete else f"Step {step} completed successfully"
-                
-                return Response(
-                    {
-                        "message": message,
-                        "current_step": user.step,
-                        "is_complete": is_complete,
-                        "progress": progress,
-                    },
-                    status=status.HTTP_200_OK,
-                )
-                
-            except ValueError as e:
-                return Response(
-                    {"error": str(e)},
-                    status=status.HTTP_400_BAD_REQUEST,
-                )
-        
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        if not serializer.is_valid():
+            # Log validation failure
+            logger.warning(
+                "Onboarding step update failed validation",
+                user_id=str(request.user.id),
+                user_email=request.user.email,
+                errors=serializer.errors,
+            )
+            ErrorHandler.log_and_raise(
+                message=f"Onboarding step update failed validation: {str(serializer.errors)}",
+                exception_class=LogicException,
+                error_code="VALIDATION_ERROR",
+                status_code=400,
+                log_level="critical",
+                extra_data={
+                    "exception_type": type(e).__name__,
+                    "user_id": str(user.id),
+                },
+            )
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        step = serializer.validated_data["step"]
+        user = request.user
+
+        try:
+            is_complete = user.update_onboarding_step(step)
+            progress = user.get_onboarding_progress()
+
+            message = "Onboarding completed!" if is_complete else f"Step {step} completed successfully"
+
+            # Set telemetry attributes
+            if current_span:
+                current_span.set_attributes({
+                    "onboarding.step": step,
+                    "onboarding.is_complete": is_complete,
+                    "operation.success": True,
+                })
+
+            # Log success
+            logger.info(
+                "User onboarding step updated",
+                user_id=str(user.id),
+                step=step,
+                is_complete=is_complete,
+            )
+
+            return Response(
+                {
+                    "message": message,
+                    "current_step": user.step,
+                    "is_complete": is_complete,
+                    "progress": progress,
+                },
+                status=status.HTTP_200_OK,
+            )
+        except Exception as e:
+            # Handle unexpected exceptions
+            ErrorHandler.log_and_raise(
+                message=f"Unexpected error updating onboarding step: {str(e)}",
+                exception_class=LogicException,
+                error_code="UNEXPECTED_ERROR",
+                status_code=400,
+                log_level="critical",
+                extra_data={
+                    "exception_type": type(e).__name__,
+                    "user_id": str(user.id),
+                },
+            )
+
+            return Response(
+                {"error": f"Unexpected error updating onboarding step: {str(e)}"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
         
     @swagger_auto_schema(
     operation_description="Move to next onboarding step",

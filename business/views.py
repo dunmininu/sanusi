@@ -550,7 +550,7 @@ class InventoryViewSet(
                 user_email=request.user.email,
                 data_keys=list(safe_data.keys()),
             )
-            print(request.data, 'request.data')
+            
             serializer = self.get_serializer(data=request.data)
             serializer.is_valid(raise_exception=True)
             self.perform_create(serializer)
