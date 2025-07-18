@@ -4,7 +4,7 @@ from django.utils.timezone import now
 from django.db.models.functions import Cast
 from decimal import Decimal
 from chat.models import Customer
-from business.models import ProductStatusChoices, Product, Order 
+from business.models import Product, Order 
 
 
 def get_customer_statistics(business):
@@ -71,8 +71,8 @@ def get_product_statistics(business):
 
     total_products = queryset.count()
 
-    low_stock_count = queryset.filter(status=ProductStatusChoices.LOW_IN_STOCK).count()
-    out_of_stock_count = queryset.filter(status=ProductStatusChoices.OUT_OF_STOCK).count()
+    low_stock_count = queryset.filter(low_in_stock=True).count()
+    out_of_stock_count = queryset.filter(low_in_stock=True).count()
 
     avg_price = queryset.aggregate(avg_price=Avg("price"))["avg_price"] or Decimal("0.00")
 
