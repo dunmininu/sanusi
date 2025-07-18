@@ -162,11 +162,11 @@ class BusinessSerializer(serializers.ModelSerializer):
 
     def update(self, instance, validated_data):
         escalation_departments_data = validated_data.pop("escalation_departments", None)
-        instance.name = validated_data.get("name", instance.name)
-        instance.email = validated_data.get("email", instance.email)
-        instance.reply_instructions = validated_data.get(
-            "reply_instructions", instance.reply_instructions
-        )
+    
+        # Update instance fields
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+
         instance.save()
 
         if escalation_departments_data is not None:
@@ -214,6 +214,7 @@ class CategorySerializer(serializers.ModelSerializer):
 
 
 class InventorySerializer(serializers.ModelSerializer):
+    expiry_date = serializers.DateTimeField(required=False, allow_null=True)
     category = CategorySerializer(read_only=True)
     business = BusinessSerializer(read_only=True)
     category_id = serializers.PrimaryKeyRelatedField(
@@ -235,17 +236,36 @@ class InventorySerializer(serializers.ModelSerializer):
             "image", 
             "bundle", 
             "category_id", 
-            "status"
+            "status",
+            "is_active",
+            "out_of_stock",
+            "low_in_stock",
+            "expiry_date",
+            "size",
+            "tags"
+
+
         ]
         read_only_fields = ["id","business"]  # Prevent user from manually setting it
 
+    def validate_expiry_date(self, value):
+        if value in ["", None]:
+            return None
+        return value
+
 
     def create(self, validated_data):
+        print('validated_data', validated_data)
         request = self.context.get("request")
         user = request.user
         default_business = user.get_default_business()
         bundles_data = validated_data.pop("bundles", None)
         price_data = validated_data.pop("price", None)
+        size_data = validated_data.pop("size", None)
+        tags_data = validated_data.pop("tags", None)
+        expiry_date = validated_data.pop("expiry_date", None)
+        if expiry_date == "":
+           expiry_date = None
         if not default_business:
             ErrorHandler.validation_error(
                 message="User does not have a business.",
@@ -279,15 +299,27 @@ class InventorySerializer(serializers.ModelSerializer):
         product = Product(**validated_data)
         product.business = default_business
         product.price = price_value
+        product.expiry_date = expiry_date
         product.save()
         if bundles_data is not None:
             product.add_to_bundle(bundles_data)
+        if size_data is not None:
+            product.add_to_size(size_data)
+        if tags_data is not None:
+            product.add_to_tags(tags_data)
         return product
 
     def update(self, instance, validated_data):
         self.context.get("request")
         bundles_data = validated_data.pop("bundles", None)
         price_data = validated_data.get("price")
+        size_data = validated_data.pop("size", None)
+        tags_data = validated_data.pop("tags", None)
+        expiry_date = validated_data.pop("expiry_date", None)
+        if expiry_date == "":
+           expiry_date = None
+        if expiry_date is not None:
+           instance.expiry_date = expiry_date
 
         # Handle price conversion if provided
         if price_data is not None:
@@ -311,6 +343,11 @@ class InventorySerializer(serializers.ModelSerializer):
 
         if bundles_data is not None:
             instance.add_to_bundle(bundles_data)
+
+        if size_data is not None:
+            instance.add_to_size(size_data)
+        if tags_data is not None:
+            instance.add_to_tags(tags_data)
 
         return instance
 
@@ -472,7 +509,7 @@ class OrderSerializer(serializers.ModelSerializer):
                 product.stock_quantity = 0
 
             product.save(update_fields=["stock_quantity"])
-            print("deduct :", product)
+            # print("deduct :", product)
 
     def _restore_inventory_from_order_products(self, order_products, business):
         """

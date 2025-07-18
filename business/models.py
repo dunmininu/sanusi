@@ -28,10 +28,9 @@ class BusinessTypeChoices(models.TextChoices):
 
 
 class ProductStatusChoices(models.TextChoices):
-    ACTIVE = "ACTIVE"
     OUT_OF_STOCK = "OUT_OF_STOCK"
     UNAVAILABLE = "UNAVAILABLE"
-    IN_ACTIVE = "IN_ACTIVE"
+    AVAILABLE = "AVAILABLE"
     LOW_IN_STOCK = "LOW_IN_STOCK"
 
 
@@ -190,7 +189,7 @@ class Product(BaseModel):
         related_name="products",
         db_index=True,
     )
-    name = models.CharField(max_length=200)
+    name = models.CharField(max_length=200, db_index=True)
     serial_number = models.CharField(max_length=200, db_index=True, null=True, blank=True)
     description = models.TextField(blank=True)
     price = models.DecimalField(max_digits=10, decimal_places=2)
@@ -199,13 +198,19 @@ class Product(BaseModel):
     business = models.ForeignKey(
         Business, on_delete=models.CASCADE, related_name="product", db_index=True
     )
-    bundle = models.JSONField(default=dict)
+    is_active = models.BooleanField(default=True, db_index=True)
+    out_of_stock = models.BooleanField(default=False, db_index=True)
+    low_in_stock = models.BooleanField(default=False, db_index=True)
+    bundle = models.JSONField(default=list)
+    tags = models.JSONField(default=list)
+    size = models.JSONField(default=list)
     status = models.CharField(
-        choices=BusinessTypeChoices.choices,
+        choices=ProductStatusChoices.choices,
         max_length=60,
-        default=ProductStatusChoices.ACTIVE,
+        default=ProductStatusChoices.AVAILABLE,
         db_index=True,
     )
+    expiry_date = models.DateTimeField(blank=True, null=True)
 
     def __str__(self):
         return self.name
@@ -229,32 +234,92 @@ class Product(BaseModel):
     
 
     def add_to_bundle(self, item, quantity=1):
-        """Add an item to the bundle"""
-        if isinstance(self.bundle, dict):
-            self.bundle[item] = self.bundle.get(item, 0) + quantity
-        elif isinstance(self.bundle, list):
-            self.bundle.append(item)
+        """Add one or more items to the bundle"""
+        if isinstance(item, list):
+            for i in item:
+                self._add_single_bundle(i, quantity)
+        else:
+            self._add_single_bundle(item, quantity)
         self.save(update_fields=["bundle"])
+
+    def _add_single_bundle(self, item, quantity):
+        # Since bundle is now always a list, simplify the logic
+        if item not in self.bundle:
+            self.bundle.append(item)
 
     def remove_from_bundle(self, item):
         """Remove an item from the bundle"""
-        if isinstance(self.bundle, dict) and item in self.bundle:
-            del self.bundle[item]
-        elif isinstance(self.bundle, list) and item in self.bundle:
+        if item in self.bundle:
             self.bundle.remove(item)
         self.save(update_fields=["bundle"])
 
     def get_bundle_items(self):
         """Get all items in the bundle"""
-        if isinstance(self.bundle, dict):
-            return list(self.bundle.keys())
         return self.bundle or []
 
     def has_item_in_bundle(self, item):
         """Check if an item is in the bundle"""
-        if isinstance(self.bundle, dict):
-            return item in self.bundle
         return item in (self.bundle or [])
+
+
+    
+
+    def add_to_size(self, item, quantity=1):
+        """Add one or more items to the size"""
+        if isinstance(item, list):
+            for i in item:
+                self._add_single_size(i, quantity)
+        else:
+            self._add_single_size(item, quantity)
+        self.save(update_fields=["size"])
+
+    def _add_single_size(self, item, quantity):
+        # Since bundle is now always a list, simplify the logic
+        if item not in self.size:
+            self.size.append(item)
+
+    def remove_from_size(self, item):
+        """Remove an item from the size"""
+        if item in self.bundle:
+            self.size.remove(item)
+        self.save(update_fields=["size"])
+
+    def get_bundle_items(self):
+        """Get all items in the size"""
+        return self.size or []
+
+    def has_item_in_bundle(self, item):
+        """Check if an item is in the size"""
+        return item in (self.size or [])
+    
+    def add_to_tags(self, item, quantity=1):
+        """Add one or more items to the tags"""
+        if isinstance(item, list):
+            for i in item:
+                self._add_single_tags(i, quantity)
+        else:
+            self._add_single_tags(item, quantity)
+        self.save(update_fields=["tags"])
+
+    def _add_single_tags(self, item, quantity):
+        # Since bundle is now always a list, simplify the logic
+        if item not in self.tags:
+            self.tags.append(item)
+
+    def remove_from_tags(self, item):
+        """Remove an item from the tags"""
+        if item in self.bundle:
+            self.tags.remove(item)
+        self.save(update_fields=["tags"])
+
+    def get_bundle_items(self):
+        """Get all items in the tags"""
+        return self.tags or []
+
+    def has_item_in_bundle(self, item):
+        """Check if an item is in the tags"""
+        return item in (self.tags or [])
+
     
     class Meta:
         constraints = [

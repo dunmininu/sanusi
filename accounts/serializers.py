@@ -78,6 +78,8 @@ class RegisterSerializer(serializers.Serializer):
 
 
 class UserSerializer(serializers.ModelSerializer):
+    onboarding_progress = serializers.SerializerMethodField()
+    onboarding_completion_percentage = serializers.ReadOnlyField()
     class Meta:
         model = User
         fields = [
@@ -89,6 +91,10 @@ class UserSerializer(serializers.ModelSerializer):
             "is_active",
             "businesses",
             "settings",
+            "step", 
+            "complete_on_boarding",
+            "onboarding_progress", 
+            "onboarding_completion_percentage"
         ]
 
         read_only_fields = [
@@ -98,6 +104,8 @@ class UserSerializer(serializers.ModelSerializer):
             "is_active",
             "businesses",
         ]
+    def get_onboarding_progress(self, obj):
+        return obj.get_onboarding_progress()
 
 
 class LoginSerializer(serializers.Serializer):
@@ -120,3 +128,13 @@ class LoginSerializer(serializers.Serializer):
                 raise serializers.ValidationError("User account is disabled.")
 
         return attrs
+    
+class OnboardingUpdateSerializer(serializers.Serializer):
+    step = serializers.IntegerField(min_value=1, max_value=7)
+
+class OnboardingProgressSerializer(serializers.Serializer):
+    current_step = serializers.IntegerField()
+    total_steps = serializers.IntegerField()
+    progress_percentage = serializers.FloatField()
+    is_complete = serializers.BooleanField()
+    remaining_steps = serializers.IntegerField()

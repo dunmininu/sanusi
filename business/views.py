@@ -3,7 +3,7 @@ import hashlib
 from django.shortcuts import get_object_or_404
 from django.db import transaction, models
 from django.core.exceptions import ObjectDoesNotExist
-from django.db.models import Case, When
+from django.db.models import Case, When, Value, BooleanField
 from loguru import logger
 
 
@@ -15,7 +15,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.status import HTTP_400_BAD_REQUEST
 from drf_yasg.utils import swagger_auto_schema, no_body
 from drf_yasg import openapi
-from django_filters import NumberFilter
+from django_filters import NumberFilter, CharFilter, BooleanFilter
 import django_filters
 
 from sanusi_backend.decorators.telemetry import with_telemetry
@@ -147,10 +147,13 @@ class BusinessApiViewSet(viewsets.ModelViewSet):
                 user_email=request.user.email,
                 data_keys=list(safe_data.keys()),
             )
-            partial = kwargs.pop("partial", False)
+            # Get the instance to update
             instance = self.get_object()
-            serializer = self.get_serializer(instance, data=request.data, partial=partial)
+            serializer = self.get_serializer(instance, data=request.data, partial=True)
+
+            # Validate the serializer
             serializer.is_valid(raise_exception=True)
+            # Save the updated instance
             self.perform_update(serializer)
 
             # Set success attributes using the current span
@@ -166,7 +169,7 @@ class BusinessApiViewSet(viewsets.ModelViewSet):
                 business_id=str(serializer.instance.id),
                 user_id=str(request.user.id)
             )
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
+            return Response(serializer.data, status=status.HTTP_200_OK)
         except Exception as e:
             # Handle unexpected exceptions
             ErrorHandler.log_and_raise(
@@ -407,7 +410,15 @@ class SanusiBusinessViewSet(mixins.CreateModelMixin, viewsets.GenericViewSet):
 class ProductFilter(BaseSearchFilter):
     class Meta(BaseSearchFilter.Meta):
         model = Product
-        fields = BaseSearchFilter.Meta.fields + ['category', 'category__name', 'serial_number']
+        fields = BaseSearchFilter.Meta.fields + [
+            'category', 
+            'category__name', 
+            'serial_number', 
+            'status',
+            'is_active',
+            'out_of_stock',
+            'low_in_stock'
+            ]
 
 # Add custom relation filters
 ProductFilter.add_relation_filter(
@@ -416,9 +427,32 @@ ProductFilter.add_relation_filter(
     lookup_expr='exact', 
     filter_class=NumberFilter
 )
-# ProductFilter.add_relation_filter('category__name', 'category__name')
+ProductFilter.add_relation_filter('category__name', 'category__name')
 ProductFilter.add_relation_filter('serial_number', 'serial_number')
-
+ProductFilter.add_relation_filter(
+    'status', 
+    'status', 
+    lookup_expr='exact', 
+    filter_class=CharFilter
+)
+ProductFilter.add_relation_filter(
+    'out_of_stock', 
+    'out_of_stock', 
+    lookup_expr='exact', 
+    filter_class=BooleanFilter
+)
+ProductFilter.add_relation_filter(
+    'is_active', 
+    'is_active', 
+    lookup_expr='exact', 
+    filter_class=BooleanFilter
+)
+ProductFilter.add_relation_filter(
+    'low_in_stock', 
+    'low_in_stock', 
+    lookup_expr='exact', 
+    filter_class=BooleanFilter
+)
 
 class InventoryViewSet(
     mixins.ListModelMixin,
@@ -435,11 +469,22 @@ class InventoryViewSet(
     def get_object(self):
         # Get company_id from URL and filter products by it
         company_id = self.kwargs.get("company_id")
-        return get_object_or_404(
-            Product,
-            id=self.kwargs.get("id"),
-            business_id=company_id,  # Ensure product belongs to company
+        # Filter products by business
+        queryset = super().get_queryset().filter(business_id=company_id)
+
+        # Annotate products: expiry_date is null -> False (0), not null -> True (1)
+        queryset = queryset.annotate(
+            has_expiry_date=Case(
+                When(expiry_date__isnull=False, then=Value(True)),
+                default=Value(False),
+                output_field=BooleanField()
+            )
         )
+
+        # Order by:
+        # 1. has_expiry_date descending (True first, so non-null comes first)
+        # 2. expiry_date ascending (soonest expiry comes first)
+        return queryset.order_by('-has_expiry_date', 'expiry_date')
 
     filter_backends = [
         django_filters.rest_framework.DjangoFilterBackend,
@@ -447,8 +492,17 @@ class InventoryViewSet(
         filters.OrderingFilter,
     ]
     filterset_class = ProductFilter
-    search_fields = ['name', 'serial_number']
-    ordering_fields = ['date_created', 'last_updated', 'name', 'serial_number']
+    search_fields = [
+        'name', 
+        'serial_number', 
+        'category__name', 
+        'category__id',
+        'status',
+        'is_active',
+        'out_of_stock',
+        'low_in_stock'
+        ]
+    ordering_fields = ['expiry_date', 'date_created', 'last_updated', 'name', 'serial_number', 'category__name']
     ordering = ['-date_created']  # Default ordering
     pagination_class = CustomPagination
 
@@ -475,6 +529,9 @@ class InventoryViewSet(
         - ordering: Order by field (prefix with - for descending)
         - page: Page number
         - page_size: Number of items per page (max 100)
+        - is_active: 
+        - out_of_stock:
+        - low_in_stock: 
         """
         return super().list(request, *args, **kwargs)
 
@@ -496,7 +553,7 @@ class InventoryViewSet(
                 user_email=request.user.email,
                 data_keys=list(safe_data.keys()),
             )
-
+            
             serializer = self.get_serializer(data=request.data)
             serializer.is_valid(raise_exception=True)
             self.perform_create(serializer)
@@ -600,6 +657,75 @@ class InventoryViewSet(
             return Response(
                 {"error": f"Unexpected error updating product: {str(e)}"},
                 status=HTTP_400_BAD_REQUEST,
+            )
+
+    @transaction.atomic
+    @with_telemetry(span_name="soft_delete_product")
+    def destroy(self, request, *args, current_span=None, **kwargs):
+        """
+        Soft delete a product by setting is_deleted=True instead of actually deleting it
+        """
+        try:
+            instance = self.get_object()
+            
+            # Check if already soft deleted
+            if instance.is_deleted:
+                return Response(
+                    {"error": "Product has already been deleted"},
+                    status=status.HTTP_404_NOT_FOUND
+                )
+            
+            # Log deletion attempt
+            logger.info(
+                "Soft deleting product",
+                product_id=str(instance.id),
+                product_name=instance.name,
+                user_id=str(request.user.id),
+                user_email=request.user.email,
+            )
+            
+            # Perform soft delete
+            instance.is_deleted = True
+            instance.save(update_fields=['is_deleted'])
+            
+            # Set success attributes using the current span
+            if current_span:
+                current_span.set_attributes(
+                    {
+                        "product.id": str(instance.id),
+                        "operation.success": True,
+                        "operation.type": "soft_delete",
+                    }
+                )
+            
+            # Log success
+            logger.info(
+                "Product soft deleted successfully",
+                product_id=str(instance.id),
+                user_id=str(request.user.id),
+            )
+            
+            return Response(
+                {"message": "Product deleted successfully"},
+                status=status.HTTP_204_NO_CONTENT
+            )
+            
+        except Exception as e:
+            # Handle unexpected exceptions
+            ErrorHandler.log_and_raise(
+                message=f"Unexpected error deleting product: {str(e)}",
+                exception_class=LogicException,
+                error_code="UNEXPECTED_ERROR",
+                status_code=500,
+                log_level="critical",
+                extra_data={
+                    "exception_type": type(e).__name__,
+                    "user_id": str(request.user.id),
+                },
+            )
+            return Response(
+                {"error": f"Unexpected error deleting product: {str(e)}"},
+                status=status.HTTP_400_BAD_REQUEST,
             )
 
 
