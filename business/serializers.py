@@ -163,20 +163,10 @@ class BusinessSerializer(serializers.ModelSerializer):
     def update(self, instance, validated_data):
         escalation_departments_data = validated_data.pop("escalation_departments", None)
     
-        # Only update fields that were actually sent in the request
-        if "name" in validated_data:
-            instance.name = validated_data["name"]
-        if "email" in validated_data:
-            instance.email = validated_data["email"]
-        if "business_type" in validated_data:
-            instance.business_type = validated_data["business_type"]
-        if "phone_number" in validated_data:
-            instance.phone_number = validated_data["phone_number"]
-        if "address" in validated_data:
-            instance.address = validated_data["address"]
-        if "reply_instructions" in validated_data:
-            instance.reply_instructions = validated_data["reply_instructions"]
-        
+        # Update instance fields
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+
         instance.save()
 
         if escalation_departments_data is not None:
@@ -519,7 +509,7 @@ class OrderSerializer(serializers.ModelSerializer):
                 product.stock_quantity = 0
 
             product.save(update_fields=["stock_quantity"])
-            print("deduct :", product)
+            # print("deduct :", product)
 
     def _restore_inventory_from_order_products(self, order_products, business):
         """

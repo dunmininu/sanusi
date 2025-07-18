@@ -147,10 +147,13 @@ class BusinessApiViewSet(viewsets.ModelViewSet):
                 user_email=request.user.email,
                 data_keys=list(safe_data.keys()),
             )
-            partial = kwargs.pop("partial", True)
+            # Get the instance to update
             instance = self.get_object()
-            serializer = self.get_serializer(instance, data=request.data, partial=partial)
+            serializer = self.get_serializer(instance, data=request.data, partial=True)
+
+            # Validate the serializer
             serializer.is_valid(raise_exception=True)
+            # Save the updated instance
             self.perform_update(serializer)
 
             # Set success attributes using the current span
