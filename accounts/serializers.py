@@ -80,6 +80,7 @@ class RegisterSerializer(serializers.Serializer):
 class UserSerializer(serializers.ModelSerializer):
     onboarding_progress = serializers.SerializerMethodField()
     onboarding_completion_percentage = serializers.ReadOnlyField()
+    roles = serializers.SerializerMethodField()
     class Meta:
         model = User
         fields = [
@@ -94,7 +95,8 @@ class UserSerializer(serializers.ModelSerializer):
             "step", 
             "complete_on_boarding",
             "onboarding_progress", 
-            "onboarding_completion_percentage"
+            "onboarding_completion_percentage",
+            "roles",
         ]
 
         read_only_fields = [
@@ -106,6 +108,16 @@ class UserSerializer(serializers.ModelSerializer):
         ]
     def get_onboarding_progress(self, obj):
         return obj.get_onboarding_progress()
+
+    def get_roles(self, obj):
+        return [
+            {
+                "name": role.name,
+                "is_owner": role.is_owner,
+                "permissions": [perm.code for perm in role.permissions.all()],
+            }
+            for role in obj.roles.all()
+        ]
 
 
 class LoginSerializer(serializers.Serializer):
