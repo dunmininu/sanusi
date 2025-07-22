@@ -215,3 +215,56 @@ class EmailAddress(BaseModel):
         self.is_verified = True
         self.save(update_fields=["is_verified"])
         self.user.save()
+
+
+class ModulePermission(BaseModel):
+    """Permission used to control access to specific modules."""
+
+    code = models.CharField(max_length=100, unique=True)
+    name = models.CharField(max_length=255)
+    description = models.TextField(blank=True)
+
+    class Meta:
+        verbose_name = "Permission"
+        verbose_name_plural = "Permissions"
+        app_label = "accounts"
+
+    def __str__(self) -> str:  # pragma: no cover - simple representation
+        return self.name
+
+
+class Role(BaseModel):
+    """A group of permissions that can be assigned to users."""
+
+    name = models.CharField(max_length=100, unique=True)
+    permissions = models.ManyToManyField(ModulePermission, related_name="roles", blank=True)
+    is_owner = models.BooleanField(default=False)
+
+    class Meta:
+        verbose_name = "Role"
+        verbose_name_plural = "Roles"
+        app_label = "accounts"
+
+    def __str__(self) -> str:  # pragma: no cover - simple representation
+        return self.name
+
+
+# Extend the User model with role assignments
+User.add_to_class(
+    "roles",
+    models.ManyToManyField(
+        Role,
+        related_name="users",
+        blank=True,
+    ),
+)
+
+
+def user_has_module_permission(self, code: str) -> bool:
+    """Check if the user has a specific module permission."""
+    if self.roles.filter(is_owner=True).exists():
+        return True
+    return self.roles.filter(permissions__code=code).exists()
+
+
+User.add_to_class("has_module_permission", user_has_module_permission)
