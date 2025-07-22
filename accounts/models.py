@@ -268,3 +268,26 @@ def user_has_module_permission(self, code: str) -> bool:
 
 
 User.add_to_class("has_module_permission", user_has_module_permission)
+
+
+class Invite(BaseModel):
+    """Stores user invitations with scoped roles."""
+
+    email = models.EmailField()
+    token = models.CharField(max_length=128, unique=True)
+    roles = models.ManyToManyField(Role, related_name="invites", blank=True)
+    invited_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        related_name="sent_invites",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+    )
+    expires_at = models.DateTimeField()
+    is_used = models.BooleanField(default=False)
+
+    class Meta:
+        app_label = "accounts"
+
+    def __str__(self):  # pragma: no cover - simple representation
+        return self.email

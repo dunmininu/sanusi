@@ -150,3 +150,16 @@ class OnboardingProgressSerializer(serializers.Serializer):
     progress_percentage = serializers.FloatField()
     is_complete = serializers.BooleanField()
     remaining_steps = serializers.IntegerField()
+
+
+class InviteSerializer(serializers.Serializer):
+    email = serializers.EmailField()
+    roles = serializers.ListField(
+        child=serializers.UUIDField(), required=False, allow_empty=True
+    )
+    message = serializers.CharField(required=False, allow_blank=True)
+
+
+class AcceptInviteSerializer(serializers.Serializer):
+    token = serializers.CharField()
+    password = serializers.CharField(write_only=True)
