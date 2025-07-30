@@ -31,9 +31,7 @@ def with_telemetry(span_name, sensitive_keys=None):
                     )
 
                     # Log safe request data keys
-                    safe_data = {
-                        k: v for k, v in request.data.items() if k not in sensitive_keys
-                    }
+                    safe_data = {k: v for k, v in request.data.items() if k not in sensitive_keys}
                     span.set_attribute("request.data_keys", list(safe_data.keys()))
 
                     # Execute the view function

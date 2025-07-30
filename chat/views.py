@@ -59,6 +59,10 @@ from sanusi.utils import (
 )
 
 from sanusi_backend.classes.custom import CustomPagination, BaseSearchFilter
+from sanusi_backend.permissions import (
+    ChatPermissions, CustomerPermissions, HasScopes
+)
+from accounts.cache import CachedUserPermissionManager
 
 
 instructions_for_auto_response = """Return your response as each of these parameters 
@@ -112,7 +116,7 @@ class CustomerViewSet(
     mixins.UpdateModelMixin,
 ):
     serializer_class = CustomerSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, CustomerPermissions.CanViewCustomer]
     filter_backends = [
         django_filters.rest_framework.DjangoFilterBackend,
         filters.SearchFilter,
@@ -124,6 +128,16 @@ class CustomerViewSet(
     ordering = ["-date_created"]  # Default ordering
     pagination_class = CustomPagination
     queryset = Customer.objects.all()
+
+    def get_permissions(self):
+        """Return different permissions based on the action."""
+        if self.action == 'create':
+            return [IsAuthenticated, CustomerPermissions.CanCreateCustomer]
+        elif self.action in ['update', 'partial_update']:
+            return [IsAuthenticated, CustomerPermissions.CanUpdateCustomer]
+        elif self.action == 'destroy':
+            return [IsAuthenticated, CustomerPermissions.CanDeleteCustomer]
+        return [IsAuthenticated, CustomerPermissions.CanViewCustomer]
 
     def get_queryset(self):
         queryset = super().get_queryset()
@@ -199,13 +213,18 @@ class CustomerViewSet(
             ErrorHandler.log_and_raise(
                 message=f"Unexpected error creating customer: {str(e)}",
                 exception_class=LogicException,
-                error_code="UNEXPECTED_ERROR",
-                status_code=500,
+                error_code="CUSTOMER_CREATE_ERROR",
+                status_code=400,
                 log_level="critical",
                 extra_data={
                     "exception_type": type(e).__name__,
                     "user_id": str(request.user.id),
                 },
+            )
+
+            return Response(
+                {"error": f"Unexpected error creating customer: {str(e)}"},
+                status=status.HTTP_400_BAD_REQUEST,
             )
 
     @transaction.atomic
@@ -221,9 +240,10 @@ class CustomerViewSet(
 
             # Log request start
             loggeru.info(
-                "update customer",
+                "Updating customer",
                 user_id=str(request.user.id),
                 user_email=request.user.email,
+                customer_id=str(kwargs.get("id")),
                 data_keys=list(safe_data.keys()),
             )
             partial = kwargs.pop("partial", False)
@@ -240,7 +260,7 @@ class CustomerViewSet(
 
             # Log success
             loggeru.info(
-                "Customer update successfully",
+                "Customer updated successfully",
                 customer_id=str(serializer.instance.id),
                 user_id=str(request.user.id),
             )
@@ -248,15 +268,70 @@ class CustomerViewSet(
         except Exception as e:
             # Handle unexpected exceptions
             ErrorHandler.log_and_raise(
-                message=f"Unexpected error update customer: {str(e)}",
+                message=f"Unexpected error updating customer: {str(e)}",
                 exception_class=LogicException,
-                error_code="UNEXPECTED_ERROR",
-                status_code=500,
+                error_code="CUSTOMER_UPDATE_ERROR",
+                status_code=400,
                 log_level="critical",
                 extra_data={
                     "exception_type": type(e).__name__,
                     "user_id": str(request.user.id),
+                    "customer_id": str(kwargs.get("id")),
                 },
+            )
+
+            return Response(
+                {"error": f"Unexpected error updating customer: {str(e)}"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+    @transaction.atomic
+    @with_telemetry(span_name="delete_customer")
+    def destroy(self, request, *args, current_span=None, **kwargs):
+        try:
+            # Log request start
+            loggeru.info(
+                "Deleting customer",
+                user_id=str(request.user.id),
+                user_email=request.user.email,
+                customer_id=str(kwargs.get("id")),
+            )
+
+            instance = self.get_object()
+            self.perform_destroy(instance)
+
+            # Set success attributes using the current span
+            if current_span:
+                current_span.set_attributes(
+                    {"customer.id": str(instance.id), "operation.success": True}
+                )
+
+            # Log success
+            loggeru.info(
+                "Customer deleted successfully",
+                customer_id=str(instance.id),
+                user_id=str(request.user.id),
+            )
+
+            return Response(status=status.HTTP_204_NO_CONTENT)
+        except Exception as e:
+            # Handle unexpected exceptions
+            ErrorHandler.log_and_raise(
+                message=f"Unexpected error deleting customer: {str(e)}",
+                exception_class=LogicException,
+                error_code="CUSTOMER_DELETE_ERROR",
+                status_code=400,
+                log_level="critical",
+                extra_data={
+                    "exception_type": type(e).__name__,
+                    "user_id": str(request.user.id),
+                    "customer_id": str(kwargs.get("id")),
+                },
+            )
+
+            return Response(
+                {"error": f"Unexpected error deleting customer: {str(e)}"},
+                status=status.HTTP_400_BAD_REQUEST,
             )
 
 
@@ -265,6 +340,19 @@ class ChatViewSet(viewsets.GenericViewSet):
     queryset = Chat.objects.all()
     filter_backends = [filters.SearchFilter]
     search_fields = ["channel", "read", "customer__name", "status"]
+    permission_classes = [IsAuthenticated, ChatPermissions.CanViewChat]
+
+    def get_permissions(self):
+        """Return different permissions based on the action."""
+        if self.action == 'create_chat':
+            return [IsAuthenticated, ChatPermissions.CanCreateChat]
+        elif self.action == 'delete_chat':
+            return [IsAuthenticated, ChatPermissions.CanDeleteChat]
+        elif self.action in ['end_chat', 'toggle_chat_status', 'toggle_sanusi']:
+            return [IsAuthenticated, ChatPermissions.CanUpdateChat]
+        elif self.action == 'send_message':
+            return [IsAuthenticated, ChatPermissions.CanRespondToChat]
+        return [IsAuthenticated, ChatPermissions.CanViewChat]
 
     @transaction.atomic
     @swagger_auto_schema(request_body=CreateChatRequestSerializer)

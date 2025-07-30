@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>You're Invited to Join Sanusi</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            line-height: 1.6;
+            color: #1d1d1f;
+            background-color: #f5f5f7;
+            margin: 0;
+            padding: 20px;
+        }
+        
+        .email-container {
+            max-width: 600px;
+            margin: 0 auto;
+            background-color: #ffffff;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #007AFF 0%, #5856D6 100%);
+            padding: 40px 30px;
+            text-align: center;
+            color: white;
+        }
+        
+        .header h1 {
+            font-size: 28px;
+            font-weight: 600;
+            margin-bottom: 10px;
+            letter-spacing: -0.5px;
+        }
+        
+        .header p {
+            font-size: 16px;
+            opacity: 0.9;
+            font-weight: 400;
+        }
+        
+        .content {
+            padding: 40px 30px;
+        }
+        
+        .welcome-text {
+            font-size: 18px;
+            color: #1d1d1f;
+            margin-bottom: 30px;
+            line-height: 1.7;
+        }
+        
+        .custom-message {
+            background-color: #f2f2f7;
+            border-left: 4px solid #007AFF;
+            padding: 20px;
+            margin-bottom: 30px;
+            border-radius: 8px;
+            font-style: italic;
+            color: #48484a;
+        }
+        
+        .cta-section {
+            text-align: center;
+            margin: 40px 0;
+        }
+        
+        .cta-button {
+            display: inline-block;
+            background: linear-gradient(135deg, #007AFF 0%, #5856D6 100%);
+            color: white;
+            text-decoration: none;
+            padding: 16px 32px;
+            border-radius: 25px;
+            font-size: 16px;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(0, 122, 255, 0.3);
+        }
+        
+        .cta-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0, 122, 255, 0.4);
+        }
+        
+        .fallback-link {
+            margin-top: 20px;
+            font-size: 14px;
+            color: #86868b;
+            word-break: break-all;
+        }
+        
+        .footer {
+            background-color: #f2f2f7;
+            padding: 30px;
+            text-align: center;
+            border-top: 1px solid #e5e5e7;
+        }
+        
+        .footer p {
+            color: #86868b;
+            font-size: 14px;
+            margin-bottom: 10px;
+        }
+        
+        .footer .brand {
+            color: #007AFF;
+            font-weight: 600;
+        }
+        
+        @media only screen and (max-width: 600px) {
+            body {
+                padding: 10px;
+            }
+            
+            .email-container {
+                border-radius: 8px;
+            }
+            
+            .header, .content, .footer {
+                padding: 30px 20px;
+            }
+            
+            .header h1 {
+                font-size: 24px;
+            }
+            
+            .welcome-text {
+                font-size: 16px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="email-container">
+        <div class="header">
+            <h1>You're Invited! 🎉</h1>
+            <p>Join the Sanusi platform and start your journey</p>
+        </div>
+        
+        <div class="content">
+            <div class="welcome-text">
+                <p>Hello!</p>
+                <p>You've been invited to join <strong>Sanusi</strong>, our powerful business management platform. We're excited to have you on board!</p>
+            </div>
+            
+            {% if custom_message %}
+            <div class="custom-message">
+                <p><strong>Personal Message:</strong><br>{{ custom_message }}</p>
+            </div>
+            {% endif %}
+            
+            <div class="cta-section">
+                <a href="{{ invitation_link }}" class="cta-button">
+                    Accept Invitation
+                </a>
+                <div class="fallback-link">
+                    <p>If the button doesn't work, copy and paste this link into your browser:</p>
+                    <p>{{ invitation_link }}</p>
+                </div>
+            </div>
+            
+            <div style="margin-top: 40px; padding: 20px; background-color: #f2f2f7; border-radius: 8px;">
+                <h3 style="color: #1d1d1f; margin-bottom: 15px; font-size: 16px;">What you'll get:</h3>
+                <ul style="color: #48484a; padding-left: 20px;">
+                    <li>Complete business management tools</li>
+                    <li>Real-time analytics and insights</li>
+                    <li>Team collaboration features</li>
+                    <li>24/7 customer support</li>
+                </ul>
+            </div>
+        </div>
+        
+        <div class="footer">
+            <p>This invitation will expire in 7 days</p>
+            <p>If you have any questions, please contact our support team</p>
+            <p style="margin-top: 20px;">
+                <span class="brand">Sanusi</span> - Empowering businesses to grow
+            </p>
+        </div>
+    </div>
+</body>
+</html> 

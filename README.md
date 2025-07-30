@@ -36,3 +36,9 @@ Use Ruff for linting:
 ruff check .
 ruff format .
 ```
+
+
+for information on autogen, read this
+```bash
+medium.com/@shravankoninti/autogen-an-agentic-open-source-framework-for-intelligent-automation-d1c374c46bbb
+```

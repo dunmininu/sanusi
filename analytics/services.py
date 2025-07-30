@@ -39,9 +39,7 @@ def get_escalation_percentage():
     total_messages = Message.objects.count()
     escalted_chats = Chat.objects.filter(escalated=True).count()
 
-    escalation_percentage = (
-        (escalted_chats / total_messages) * 100 if total_messages > 0 else 0
-    )
+    escalation_percentage = (escalted_chats / total_messages) * 100 if total_messages > 0 else 0
     return escalation_percentage
 
 
@@ -70,9 +68,7 @@ def get_repeat_interaction_counts():
 
 
 def get_sentiment_distribution():
-    sentiment_counts = Chat.objects.values("sentiment").annotate(
-        sentiment_count=Count("sentiment")
-    )
+    sentiment_counts = Chat.objects.values("sentiment").annotate(sentiment_count=Count("sentiment"))
 
     total_messages = Message.objects.count()
     sentiment_distribution = {

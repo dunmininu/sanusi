@@ -214,24 +214,21 @@ class Product(BaseModel):
 
     def __str__(self):
         return self.name
-    
 
     def generate_serial_number(self):
         def segment(length=3):
-            return ''.join(random.choices(string.ascii_uppercase, k=length))
+            return "".join(random.choices(string.ascii_uppercase, k=length))
 
         # Get first 3 uppercase alphanumeric characters of business and product name
-        biz_part = ''.join(filter(str.isalnum, self.business.name.upper()))[:3]
-        prod_part = ''.join(filter(str.isalnum, self.name.upper()))[:4]
+        biz_part = "".join(filter(str.isalnum, self.business.name.upper()))[:3]
+        prod_part = "".join(filter(str.isalnum, self.name.upper()))[:4]
 
         return f"SN-{biz_part}-{prod_part}-{segment()}-{segment()}-{random.randint(1, 99):02d}"
-    
+
     def save(self, *args, **kwargs):
         if not self.serial_number or self.serial_number.strip() == "":
             self.serial_number = self.generate_serial_number()
         super().save(*args, **kwargs)
-
-    
 
     def add_to_bundle(self, item, quantity=1):
         """Add one or more items to the bundle"""
@@ -261,9 +258,6 @@ class Product(BaseModel):
         """Check if an item is in the bundle"""
         return item in (self.bundle or [])
 
-
-    
-
     def add_to_size(self, item, quantity=1):
         """Add one or more items to the size"""
         if isinstance(item, list):
@@ -291,7 +285,7 @@ class Product(BaseModel):
     def has_item_in_bundle(self, item):
         """Check if an item is in the size"""
         return item in (self.size or [])
-    
+
     def add_to_tags(self, item, quantity=1):
         """Add one or more items to the tags"""
         if isinstance(item, list):
@@ -320,7 +314,6 @@ class Product(BaseModel):
         """Check if an item is in the tags"""
         return item in (self.tags or [])
 
-    
     class Meta:
         constraints = [
             models.UniqueConstraint(

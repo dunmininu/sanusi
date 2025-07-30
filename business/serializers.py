@@ -133,11 +133,11 @@ class BusinessSerializer(serializers.ModelSerializer):
         # Check if company_id already exists
         if Business.objects.filter(id=company_id).exists():
             ErrorHandler.validation_error(
-                    message="Company ID already exists",
-                    field="id", 
-                    error_code="INVALID_COMPANY_ID",
-                    extra_data={"provided_id": data["company_id"]}
-                )
+                message="Company ID already exists",
+                field="id",
+                error_code="INVALID_COMPANY_ID",
+                extra_data={"provided_id": data["company_id"]},
+            )
         return data
 
     def create(self, validated_data):
@@ -162,7 +162,7 @@ class BusinessSerializer(serializers.ModelSerializer):
 
     def update(self, instance, validated_data):
         escalation_departments_data = validated_data.pop("escalation_departments", None)
-    
+
         # Update instance fields
         for attr, value in validated_data.items():
             setattr(instance, attr, value)
@@ -191,8 +191,8 @@ class CategorySerializer(serializers.ModelSerializer):
     class Meta:
         model = Category
         fields = ["id", "name", "business"]
-        read_only_fields = ["id","business"]  # Prevent user from manually setting it
-    
+        read_only_fields = ["id", "business"]  # Prevent user from manually setting it
+
     def create(self, validated_data):
         request = self.context.get("request")
         user = request.user
@@ -200,17 +200,16 @@ class CategorySerializer(serializers.ModelSerializer):
         if not default_business:
             ErrorHandler.validation_error(
                 message="User does not have a business.",
-                field="business_id", 
+                field="business_id",
                 error_code="NO_DEFAULT_BUSINESS",
-                extra_data={"user_id": user.id}
+                extra_data={"user_id": user.id},
             )
-      
+
         category = Category(**validated_data)
         category.business = default_business
         category.save()
-        
-        return category
 
+        return category
 
 
 class InventorySerializer(serializers.ModelSerializer):
@@ -222,40 +221,38 @@ class InventorySerializer(serializers.ModelSerializer):
         write_only=True,
         source="category",
     )  # For POST/PUT
+
     class Meta:
         model = Product
         fields = [
-            "id", 
-            "name", 
-            "business", 
-            "category", 
-            "serial_number", 
-            "description", 
-            "price", 
-            "stock_quantity", 
-            "image", 
-            "bundle", 
-            "category_id", 
+            "id",
+            "name",
+            "business",
+            "category",
+            "serial_number",
+            "description",
+            "price",
+            "stock_quantity",
+            "image",
+            "bundle",
+            "category_id",
             "status",
             "is_active",
             "out_of_stock",
             "low_in_stock",
             "expiry_date",
             "size",
-            "tags"
-
-
+            "tags",
         ]
-        read_only_fields = ["id","business"]  # Prevent user from manually setting it
+        read_only_fields = ["id", "business"]  # Prevent user from manually setting it
 
     def validate_expiry_date(self, value):
         if value in ["", None]:
             return None
         return value
 
-
     def create(self, validated_data):
-        print('validated_data', validated_data)
+        print("validated_data", validated_data)
         request = self.context.get("request")
         user = request.user
         default_business = user.get_default_business()
@@ -265,7 +262,7 @@ class InventorySerializer(serializers.ModelSerializer):
         tags_data = validated_data.pop("tags", None)
         expiry_date = validated_data.pop("expiry_date", None)
         if expiry_date == "":
-           expiry_date = None
+            expiry_date = None
         if not default_business:
             ErrorHandler.validation_error(
                 message="User does not have a business.",
@@ -317,9 +314,9 @@ class InventorySerializer(serializers.ModelSerializer):
         tags_data = validated_data.pop("tags", None)
         expiry_date = validated_data.pop("expiry_date", None)
         if expiry_date == "":
-           expiry_date = None
+            expiry_date = None
         if expiry_date is not None:
-           instance.expiry_date = expiry_date
+            instance.expiry_date = expiry_date
 
         # Handle price conversion if provided
         if price_data is not None:
@@ -352,21 +349,13 @@ class InventorySerializer(serializers.ModelSerializer):
         return instance
 
 
-
-
 class OrderProductSerializer(serializers.ModelSerializer):
     product = InventorySerializer(read_only=True)  # Complete product details
     product_id = serializers.UUIDField(write_only=True)  # For creating/updating
 
     class Meta:
         model = OrderProduct
-        fields = [
-            "id", 
-            "product", 
-            "product_id", 
-            "quantity", 
-            "price"
-        ]
+        fields = ["id", "product", "product_id", "quantity", "price"]
         read_only_fields = ["id"]
 
 
@@ -374,26 +363,25 @@ class CustomeSerializer(serializers.ModelSerializer):
     class Meta:
         model = Customer
         fields = [
-            "id", 
-            "name", 
-            "email", 
-            "phone_number", 
-            "platform", 
-            "identifier", 
-            "business", 
-            "date_created"
+            "id",
+            "name",
+            "email",
+            "phone_number",
+            "platform",
+            "identifier",
+            "business",
+            "date_created",
         ]
         read_only_fields = [
             "id",
-            "identifier", 
-            "business", 
-            "date_created"
+            "identifier",
+            "business",
+            "date_created",
         ]  # Prevent user from manually setting it
 
+
 class OrderSerializer(serializers.ModelSerializer):
-    order_products = OrderProductSerializer(
-        many=True, read_only=True
-    )  # Complete order products
+    order_products = OrderProductSerializer(many=True, read_only=True)  # Complete order products
     customer = CustomeSerializer(read_only=True)  # Complete customer details
     customer_id = serializers.UUIDField(write_only=True)  # For creating/updating
     order_products_data = serializers.ListField(
@@ -440,9 +428,7 @@ class OrderSerializer(serializers.ModelSerializer):
             price = product_data.get("price", 0)
 
             try:
-                product = Product.objects.select_for_update().get(
-                    id=product_id, business=business
-                )
+                product = Product.objects.select_for_update().get(id=product_id, business=business)
             except Product.DoesNotExist:
                 ErrorHandler.validation_error(
                     message="Product not found or doesn't belong to this business.",
@@ -484,9 +470,7 @@ class OrderSerializer(serializers.ModelSerializer):
                 )
 
             # Store for inventory update
-            inventory_updates.append(
-                {"product": product, "quantity_to_deduct": stock_quantity}
-            )
+            inventory_updates.append({"product": product, "quantity_to_deduct": stock_quantity})
 
         return inventory_updates
 
@@ -560,9 +544,7 @@ class OrderSerializer(serializers.ModelSerializer):
         )
 
         # Create order
-        order = Order.objects.create(
-            customer=customer, business=default_business, **validated_data
-        )
+        order = Order.objects.create(customer=customer, business=default_business, **validated_data)
 
         # Create order products and update inventory
         try:
@@ -651,9 +633,7 @@ class OrderSerializer(serializers.ModelSerializer):
         if original_status != "CANCELLED" and new_status == "CANCELLED":
             # Restore inventory from existing order products
             existing_order_products = instance.order_products.select_related("product").all()
-            self._restore_inventory_from_order_products(
-                existing_order_products, default_business
-            )
+            self._restore_inventory_from_order_products(existing_order_products, default_business)
 
         # Handle status change from CANCELLED to active status - deduct inventory again
         elif original_status == "CANCELLED" and new_status != "CANCELLED":
@@ -683,7 +663,7 @@ class OrderSerializer(serializers.ModelSerializer):
 
         # Update order fields
         # Fields that should be merged instead of overwritten
-        json_merge_fields = ['delivery_info', 'payment_summary', 'meta']
+        json_merge_fields = ["delivery_info", "payment_summary", "meta"]
 
         for attr, value in validated_data.items():
             if attr in json_merge_fields:
@@ -696,16 +676,13 @@ class OrderSerializer(serializers.ModelSerializer):
             else:
                 setattr(instance, attr, value)
 
-
         instance.save()
 
         # Update order products if provided (and not just changing to/from cancelled)
         if order_products_data is not None and original_status != "CANCELLED":
             # If order is currently active, restore inventory from old products first
             if new_status != "CANCELLED":
-                existing_order_products = instance.order_products.select_related(
-                    "product"
-                ).all()
+                existing_order_products = instance.order_products.select_related("product").all()
                 self._restore_inventory_from_order_products(
                     existing_order_products, default_business
                 )
@@ -731,9 +708,7 @@ class OrderSerializer(serializers.ModelSerializer):
                     # Convert price to decimal
                     try:
                         price_value = Decimal(str(price))
-                        price_value = price_value.quantize(
-                            Decimal("0.01"), rounding=ROUND_HALF_UP
-                        )
+                        price_value = price_value.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
                     except (TypeError, ValueError, InvalidOperation) as e:
                         ErrorHandler.validation_error(
                             message=f"Invalid price format: {str(e)}",

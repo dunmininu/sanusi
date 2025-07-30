@@ -107,7 +107,7 @@ MIDDLEWARE = [
     # "django_tenants.middleware.TenantMiddleware",
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
-    "whitenoise.middleware.WhiteNoiseMiddleware", 
+    "whitenoise.middleware.WhiteNoiseMiddleware",
     # "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
@@ -115,6 +115,7 @@ MIDDLEWARE = [
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     "corsheaders.middleware.CorsMiddleware",
     "django.middleware.common.CommonMiddleware",
+    "accounts.cache.PermissionCacheMiddleware",
 ]
 
 ROOT_URLCONF = "sanusi_backend.urls"
@@ -150,7 +151,7 @@ DATABASES = {
         "NAME": config("DB_NAME"),
         "USER": config("DB_USER"),
         "PASSWORD": config("DB_PASSWORD"),
-        "HOST":  config("DB_HOST"),
+        "HOST": config("DB_HOST"),
         "PORT": config("DB_PORT", cast=int),
         "ATOMIC_REQUESTS": True,
     },
@@ -212,19 +213,29 @@ USE_I18N = True
 
 USE_TZ = True
 
+EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
+EMAIL_HOST = config("EMAIL_HOST")
+EMAIL_PORT = config("EMAIL_PORT", cast=int)
+EMAIL_HOST_USER = config("EMAIL_HOST_USER")
+EMAIL_HOST_PASSWORD = config("EMAIL_HOST_PASSWORD")
+EMAIL_USE_TLS = True
+
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/4.1/howto/static-files/
 
 STATIC_URL = "static/"
 STATIC_ROOT = os.path.join(BASE_DIR, "staticfiles")
-STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/4.1/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 OPENAI_KEY = config("OPENAI_KEY")
+
+# Frontend configuration
+FRONTEND_BASE_URL = config("FRONTEND_BASE_URL", default="http://localhost:3000")
 
 # crispy templates
 CRISPY_ALLOWED_TEMPLATE_PACKS = "bootstrap4"
@@ -252,9 +263,7 @@ API_PREFIX = "/api/v1"
 SWAGGER_SETTINGS = {
     "DEFAULT_INFO": "sanusi_backend.urls.swagger_info",  # Customize as needed
     "SCHEMA_URL": "/swagger/",  # Customize the URL path for your Swagger documentation
-    "SECURITY_DEFINITIONS": {
-        "Token": {"type": "apiKey", "name": "Authorization", "in": "header"}
-    },
+    "SECURITY_DEFINITIONS": {"Token": {"type": "apiKey", "name": "Authorization", "in": "header"}},
     "DEFAULT_GENERATOR_CLASS": "drf_yasg.generators.OpenAPISchemaGenerator",
     "DEFAULT_API_URL": config(
         "DEFAULT_API_URL", default="http://127.0.0.1:8000"

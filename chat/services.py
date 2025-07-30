@@ -255,7 +255,8 @@ class AutoResponseService:
 
         response_json = {
             "response": self.html_format(response_text),
-            "escalate_issue": escalation_department in [
+            "escalate_issue": escalation_department
+            in [
                 "sales",
                 "operations",
                 "billing",

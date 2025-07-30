@@ -3,14 +3,14 @@
 from __future__ import annotations
 
 import os
-from typing import Annotated, Any, Dict, Literal, Tuple
+import autogen
+import requests
 
-# import autogen
+from typing import Annotated, Any, Dict, Literal, Tuple
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.forms.models import model_to_dict
 from django.utils import timezone
-import requests
 
 
 class AutogenAgents:

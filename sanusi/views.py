@@ -15,7 +15,6 @@ from rest_framework.decorators import api_view
 from rest_framework import status, serializers, generics, mixins
 
 # import openai
-from langchain import OpenAI as oai
 
 from chat.models import Message
 
@@ -31,11 +30,14 @@ from business.private.models import KnowledgeBase
 # Create your views here.
 # openai.api_key = settings.OPENAI_KEY
 
+
 @lru_cache(maxsize=1)
 def get_openai():
     import openai
+
     openai.api_key = settings.OPENAI_KEY
     return openai
+
 
 def construct_index(knowledge_base):
     from langchain import OpenAI as oai
@@ -118,9 +120,7 @@ def generate_response_chat_v2(prompt):
     ]
     responses = []
     for field_prompt in field_prompts:
-        prompt_text = (
-            "\n".join([message["content"] for message in prompt]) + "\n" + field_prompt
-        )
+        prompt_text = "\n".join([message["content"] for message in prompt]) + "\n" + field_prompt
         response_text = ""
         max_retries = 3
         retries = 0
@@ -196,9 +196,7 @@ def generate_response_email_v2(prompt):
     ]
     responses = []
     for field_prompt in field_prompts:
-        prompt_text = (
-            "\n".join([message["content"] for message in prompt]) + "\n" + field_prompt
-        )
+        prompt_text = "\n".join([message["content"] for message in prompt]) + "\n" + field_prompt
         response_text = ""
         max_retries = 3
         retries = 0
@@ -371,9 +369,7 @@ class SanusiMessageChannelViewSet(mixins.CreateModelMixin, generics.GenericAPIVi
                 channel=channel,
             )
 
-        return Response(
-            {"response": chat_session[-1]["content"]}, status=status.HTTP_201_CREATED
-        )
+        return Response({"response": chat_session[-1]["content"]}, status=status.HTTP_201_CREATED)
 
 
 @csrf_exempt

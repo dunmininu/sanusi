@@ -14,22 +14,22 @@ class CustomerSerializer(serializers.ModelSerializer):
     class Meta:
         model = Customer
         fields = [
-            "id", 
-            "name", 
-            "email", 
-            "phone_number", 
-            "platform", 
-            "identifier", 
-            "business", 
-            "date_created"
+            "id",
+            "name",
+            "email",
+            "phone_number",
+            "platform",
+            "identifier",
+            "business",
+            "date_created",
         ]
         read_only_fields = [
             "id",
-            "identifier", 
-            "business", 
-            "date_created"
+            "identifier",
+            "business",
+            "date_created",
         ]  # Prevent user from manually setting it
-   
+
     def create(self, validated_data):
         request = self.context.get("request")
         user = request.user

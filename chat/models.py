@@ -22,6 +22,7 @@ class ChannelChoices(models.TextChoices):
     TELEGRAM = ("telegram", "Business Telegram channel")
     TWITTER = ("twitter", "Business Twitter channel")
 
+
 class PlatformChoices(models.TextChoices):
     INSTAGRAM = "INSTAGRAM", "Instagram"
     FACEBOOK = "FACEBOOK", "Facebook"

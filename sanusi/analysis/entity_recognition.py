@@ -1,5 +1,6 @@
 from functools import lru_cache
 
+
 def extract_keywords(text):
     from rake_nltk import Rake
 
@@ -8,16 +9,18 @@ def extract_keywords(text):
     return r.get_ranked_phrases()
 
 
-@lru_cache(maxsize=1)
-def get_nlp():
-    import spacy
-    return spacy.load("en_core_web_sm")
+# @lru_cache(maxsize=1)
+# def get_nlp():
+#     import spacy
+
+#     return spacy.load("en_core_web_sm")
 
 
 def extract_entities(text):
-    nlp = get_nlp()
-    doc = nlp(text)
-    return [(ent.text, ent.label_) for ent in doc.ents]
+    # nlp = get_nlp()
+    # doc = nlp(text)
+    # return [(ent.text, ent.label_) for ent in doc.ents]
+    return []  # spacy features are disabled
 
 
 def extract_topics(text):
@@ -27,8 +30,7 @@ def extract_topics(text):
     combined = list(set(keywords + entities))
 
     return {
-        "keywords": list(set(keywords)), # To ensure no duplicate keywords
-        "entities": list(set(entities)), # To ensure no duplicate entities
+        "keywords": list(set(keywords)),  # To ensure no duplicate keywords
+        "entities": list(set(entities)),  # To ensure no duplicate entities
         "combined": combined,
     }
-

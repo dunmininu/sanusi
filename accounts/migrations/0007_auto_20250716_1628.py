@@ -2,21 +2,20 @@
 
 from django.db import migrations, models
 
+
 def set_existing_users_onboarding_complete(apps, schema_editor):
     """
     Set complete_on_boarding = True and step = 7 for all existing users
     """
-    User = apps.get_model('accounts', 'User')
-    
+    User = apps.get_model("accounts", "User")
+
     # Update all existing users
-    User.objects.all().update(
-        complete_on_boarding=True,
-        step=7
-    )
-    
+    User.objects.all().update(complete_on_boarding=True, step=7)
+
     # Print how many users were updated
     updated_count = User.objects.filter(complete_on_boarding=True, step=7).count()
     print(f"Updated {updated_count} existing users to completed onboarding status")
+
 
 class Migration(migrations.Migration):
     dependencies = [
@@ -26,18 +25,16 @@ class Migration(migrations.Migration):
     operations = [
         # Add the step field with default=0
         migrations.AddField(
-            model_name='user',
-            name='step',
+            model_name="user",
+            name="step",
             field=models.IntegerField(default=0),
         ),
-        
         # Add the complete_on_boarding field with default=False
         migrations.AddField(
-            model_name='user',
-            name='complete_on_boarding',
+            model_name="user",
+            name="complete_on_boarding",
             field=models.BooleanField(default=False),
         ),
-        
         # Run the data migration to update existing users
         migrations.RunPython(
             set_existing_users_onboarding_complete,

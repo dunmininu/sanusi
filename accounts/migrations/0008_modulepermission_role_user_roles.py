@@ -68,8 +68,6 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name="user",
             name="roles",
-            field=models.ManyToManyField(
-                blank=True, related_name="users", to="accounts.role"
-            ),
+            field=models.ManyToManyField(blank=True, related_name="users", to="accounts.role"),
         ),
     ]

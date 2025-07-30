@@ -2,6 +2,7 @@ from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from django.contrib.auth import authenticate, get_user_model
+from django.conf import settings
 from accounts.serializers import (
     LoginSerializer,
     RegisterSerializer,
@@ -17,13 +18,17 @@ from django.db import transaction
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from django.utils import timezone
 from django.shortcuts import get_object_or_404
-from django.core.mail import send_mail
+from django.core.mail import EmailMessage
+from django.template.loader import render_to_string
 import secrets
 
 from loguru import logger
 from sanusi_backend.decorators.telemetry import with_telemetry
-from sanusi_backend.utils.error_handler import ErrorHandler, LogicException
-from sanusi_backend.permissions import HasScopes
+from sanusi_backend.utils.error_handler import CustomException, ErrorHandler, LogicException
+from sanusi_backend.permissions import (
+    HasScopes, UserPermissions, SystemPermissions
+)
+from accounts.cache import CachedUserPermissionManager
 
 from .models import Invite, Role, EmailAddress
 from .services.oauth import OAuthService
@@ -114,15 +119,13 @@ class AuthenticationViewSet(viewsets.GenericViewSet):
                                     properties={
                                         "current_step": openapi.Schema(type=openapi.TYPE_INTEGER),
                                         "total_steps": openapi.Schema(type=openapi.TYPE_INTEGER),
-                                "progress_percentage": openapi.Schema(
-                                    type=openapi.TYPE_NUMBER
-                                ),
-                                "is_complete": openapi.Schema(
-                                    type=openapi.TYPE_BOOLEAN
-                                ),
-                                "remaining_steps": openapi.Schema(
-                                    type=openapi.TYPE_INTEGER
-                                ),
+                                        "progress_percentage": openapi.Schema(
+                                            type=openapi.TYPE_NUMBER
+                                        ),
+                                        "is_complete": openapi.Schema(type=openapi.TYPE_BOOLEAN),
+                                        "remaining_steps": openapi.Schema(
+                                            type=openapi.TYPE_INTEGER
+                                        ),
                                     },
                                 ),
                                 "onboarding_completion_percentage": openapi.Schema(
@@ -213,9 +216,7 @@ class AuthenticationViewSet(viewsets.GenericViewSet):
         request_body=openapi.Schema(
             type=openapi.TYPE_OBJECT,
             properties={
-                "refresh": openapi.Schema(
-                    type=openapi.TYPE_STRING, description="Refresh token"
-                )
+                "refresh": openapi.Schema(type=openapi.TYPE_STRING, description="Refresh token")
             },
             required=["refresh"],
         ),
@@ -252,65 +253,63 @@ class AuthenticationViewSet(viewsets.GenericViewSet):
             )
 
         except Exception:
-            return Response(
-                {"error": "Invalid refresh token"}, status=status.HTTP_401_UNAUTHORIZED
-            )
-        
+            return Response({"error": "Invalid refresh token"}, status=status.HTTP_401_UNAUTHORIZED)
+
     @swagger_auto_schema(
-    operation_description="Get user onboarding progress",
-    responses={
-        200: openapi.Response(
-            description="Onboarding progress retrieved successfully",
-            schema=openapi.Schema(
-                type=openapi.TYPE_OBJECT,
-                properties={
-                    "current_step": openapi.Schema(type=openapi.TYPE_INTEGER),
-                    "total_steps": openapi.Schema(type=openapi.TYPE_INTEGER),
-                    "progress_percentage": openapi.Schema(type=openapi.TYPE_NUMBER),
-                    "is_complete": openapi.Schema(type=openapi.TYPE_BOOLEAN),
-                    "remaining_steps": openapi.Schema(type=openapi.TYPE_INTEGER),
-                },
+        operation_description="Get user onboarding progress",
+        responses={
+            200: openapi.Response(
+                description="Onboarding progress retrieved successfully",
+                schema=openapi.Schema(
+                    type=openapi.TYPE_OBJECT,
+                    properties={
+                        "current_step": openapi.Schema(type=openapi.TYPE_INTEGER),
+                        "total_steps": openapi.Schema(type=openapi.TYPE_INTEGER),
+                        "progress_percentage": openapi.Schema(type=openapi.TYPE_NUMBER),
+                        "is_complete": openapi.Schema(type=openapi.TYPE_BOOLEAN),
+                        "remaining_steps": openapi.Schema(type=openapi.TYPE_INTEGER),
+                    },
+                ),
             ),
-        ),
-        401: openapi.Response(description="Unauthorized"),
-    },
+            401: openapi.Response(description="Unauthorized"),
+        },
     )
     @action(detail=False, methods=["get"], permission_classes=[IsAuthenticated])
     def onboarding_progress(self, request):
         """Get current user's onboarding progress"""
         user = request.user
         progress = user.get_onboarding_progress()
-        
+
         return Response(progress, status=status.HTTP_200_OK)
 
     @swagger_auto_schema(
-    operation_description="Update user onboarding step",
-    request_body=OnboardingUpdateSerializer,
-    responses={
-        200: openapi.Response(
-            description="Onboarding step updated successfully",
-            schema=openapi.Schema(
-                type=openapi.TYPE_OBJECT,
-                properties={
-                    "message": openapi.Schema(type=openapi.TYPE_STRING),
-                    "current_step": openapi.Schema(type=openapi.TYPE_INTEGER),
-                    "is_complete": openapi.Schema(type=openapi.TYPE_BOOLEAN),
-                    "progress": openapi.Schema(
-                        type=openapi.TYPE_OBJECT,
-                        properties={
-                            "current_step": openapi.Schema(type=openapi.TYPE_INTEGER),
-                            "total_steps": openapi.Schema(type=openapi.TYPE_INTEGER),
-                            "progress_percentage": openapi.Schema(type=openapi.TYPE_NUMBER),
-                            "is_complete": openapi.Schema(type=openapi.TYPE_BOOLEAN),
-                            "remaining_steps": openapi.Schema(type=openapi.TYPE_INTEGER),
-                        },
-                    ),
-                },
+        operation_description="Update user onboarding step",
+        request_body=OnboardingUpdateSerializer,
+        responses={
+            200: openapi.Response(
+                description="Onboarding step updated successfully",
+                schema=openapi.Schema(
+                    type=openapi.TYPE_OBJECT,
+                    properties={
+                        "message": openapi.Schema(type=openapi.TYPE_STRING),
+                        "current_step": openapi.Schema(type=openapi.TYPE_INTEGER),
+                        "is_complete": openapi.Schema(type=openapi.TYPE_BOOLEAN),
+                        "progress": openapi.Schema(
+                            type=openapi.TYPE_OBJECT,
+                            properties={
+                                "current_step": openapi.Schema(type=openapi.TYPE_INTEGER),
+                                "total_steps": openapi.Schema(type=openapi.TYPE_INTEGER),
+                                "progress_percentage": openapi.Schema(type=openapi.TYPE_NUMBER),
+                                "is_complete": openapi.Schema(type=openapi.TYPE_BOOLEAN),
+                                "remaining_steps": openapi.Schema(type=openapi.TYPE_INTEGER),
+                            },
+                        ),
+                    },
+                ),
             ),
-        ),
-        400: openapi.Response(description="Bad request"),
-        401: openapi.Response(description="Unauthorized"),
-    },
+            400: openapi.Response(description="Bad request"),
+            401: openapi.Response(description="Unauthorized"),
+        },
     )
     @action(detail=False, methods=["post"], permission_classes=[IsAuthenticated])
     @with_telemetry(span_name="update_onboarding_step")
@@ -349,11 +348,13 @@ class AuthenticationViewSet(viewsets.GenericViewSet):
 
             # Set telemetry attributes
             if current_span:
-                current_span.set_attributes({
-                    "onboarding.step": step,
-                    "onboarding.is_complete": is_complete,
-                    "operation.success": True,
-                })
+                current_span.set_attributes(
+                    {
+                        "onboarding.step": step,
+                        "onboarding.is_complete": is_complete,
+                        "operation.success": True,
+                    }
+                )
 
             # Log success
             logger.info(
@@ -391,51 +392,50 @@ class AuthenticationViewSet(viewsets.GenericViewSet):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        
     @swagger_auto_schema(
-    operation_description="Move to next onboarding step",
-    responses={
-        200: openapi.Response(
-            description="Moved to next onboarding step successfully",
-            schema=openapi.Schema(
-                type=openapi.TYPE_OBJECT,
-                properties={
-                    "message": openapi.Schema(type=openapi.TYPE_STRING),
-                    "current_step": openapi.Schema(type=openapi.TYPE_INTEGER),
-                    "is_complete": openapi.Schema(type=openapi.TYPE_BOOLEAN),
-                    "progress": openapi.Schema(
-                        type=openapi.TYPE_OBJECT,
-                        properties={
-                            "current_step": openapi.Schema(type=openapi.TYPE_INTEGER),
-                            "total_steps": openapi.Schema(type=openapi.TYPE_INTEGER),
-                            "progress_percentage": openapi.Schema(type=openapi.TYPE_NUMBER),
-                            "is_complete": openapi.Schema(type=openapi.TYPE_BOOLEAN),
-                            "remaining_steps": openapi.Schema(type=openapi.TYPE_INTEGER),
-                        },
-                    ),
-                },
+        operation_description="Move to next onboarding step",
+        responses={
+            200: openapi.Response(
+                description="Moved to next onboarding step successfully",
+                schema=openapi.Schema(
+                    type=openapi.TYPE_OBJECT,
+                    properties={
+                        "message": openapi.Schema(type=openapi.TYPE_STRING),
+                        "current_step": openapi.Schema(type=openapi.TYPE_INTEGER),
+                        "is_complete": openapi.Schema(type=openapi.TYPE_BOOLEAN),
+                        "progress": openapi.Schema(
+                            type=openapi.TYPE_OBJECT,
+                            properties={
+                                "current_step": openapi.Schema(type=openapi.TYPE_INTEGER),
+                                "total_steps": openapi.Schema(type=openapi.TYPE_INTEGER),
+                                "progress_percentage": openapi.Schema(type=openapi.TYPE_NUMBER),
+                                "is_complete": openapi.Schema(type=openapi.TYPE_BOOLEAN),
+                                "remaining_steps": openapi.Schema(type=openapi.TYPE_INTEGER),
+                            },
+                        ),
+                    },
+                ),
             ),
-        ),
-        400: openapi.Response(description="Bad request - already at max step"),
-        401: openapi.Response(description="Unauthorized"),
-    },
-)
+            400: openapi.Response(description="Bad request - already at max step"),
+            401: openapi.Response(description="Unauthorized"),
+        },
+    )
     @action(detail=False, methods=["post"], permission_classes=[IsAuthenticated])
     def next_onboarding_step(self, request):
         """Move user to next onboarding step"""
         user = request.user
-        
+
         if user.step >= user.TOTAL_ONBOARDING_STEPS:
             return Response(
                 {"error": "User has already completed all onboarding steps"},
                 status=status.HTTP_400_BAD_REQUEST,
             )
-        
+
         is_complete = user.next_onboarding_step()
         progress = user.get_onboarding_progress()
-        
+
         message = "Onboarding completed!" if is_complete else f"Moved to step {user.step}"
-        
+
         return Response(
             {
                 "message": message,
@@ -448,14 +448,23 @@ class AuthenticationViewSet(viewsets.GenericViewSet):
 
     # ----------- Invitation & User Management -----------
 
-    required_scopes = ["auth.manage_users"]
-
     @action(
         detail=False,
         methods=["post"],
-        permission_classes=[IsAuthenticated, HasScopes],
+        permission_classes=[IsAuthenticated, UserPermissions.CanInviteUser],
     )
-    def invite(self, request):
+    @swagger_auto_schema(
+        operation_description="Invite a new user",
+        request_body=InviteSerializer,
+        responses={
+            200: openapi.Response(description="User invited successfully"),
+            400: openapi.Response(description="Bad request"),
+            401: openapi.Response(description="Unauthorized"),
+        },
+    )
+    @with_telemetry(span_name="invite_user")
+    @transaction.atomic
+    def invite(self, request, *args, current_span=None, **kwargs):
         """Invite a user via email."""
         serializer = InviteSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -470,15 +479,50 @@ class AuthenticationViewSet(viewsets.GenericViewSet):
         roles_ids = serializer.validated_data.get("roles", [])
         if roles_ids:
             invite.roles.set(Role.objects.filter(id__in=roles_ids))
+        
+                # Create invitation link
+        invitation_link = f"{settings.FRONTEND_BASE_URL}/accept-invite?token={token}"
+        
+        custom_message = serializer.validated_data.get("message", "")
+        
+        # Prepare context for template
+        context = {
+            'invitation_link': invitation_link,
+            'custom_message': custom_message,
+        }
+        
+        # Render HTML email using Django template
+        html_content = render_to_string('accounts/emails/invitation.html', context)
+        
+        try:
+            email = EmailMessage(
+                subject="You're invited to join Sanusi",
+                body=html_content,
+                from_email=None,
+                to=[invite.email]
+            )
+            email.content_subtype = "html"
+            # email.body = html_content
+            email.send()
+        except ConnectionRefusedError as e:
+            ErrorHandler.log_and_raise(
+                message=f"Failed to send email: {str(e)}",
+                exception_class=CustomException,
+                error_code="EMAIL_SEND_ERROR",
+                status_code=400,
+                extra_data={"email": invite.email},
+            )
+            return Response({"error": "Failed to send email"}, status=status.HTTP_400_BAD_REQUEST)
 
-        message = serializer.validated_data.get("message", "")
-        send_mail(
-            "You're invited",
-            message,
-            None,
-            [invite.email],
-            fail_silently=True,
-        )
+        except Exception as e:
+            ErrorHandler.log_and_raise(
+                message=f"Failed to send email: {str(e)}",
+                exception_class=LogicException,
+                error_code="EMAIL_SEND_ERROR",
+                status_code=400,
+            )
+            return Response({"error": "Failed to send email"}, status=status.HTTP_400_BAD_REQUEST)
+
         return Response({"token": invite.token}, status=status.HTTP_201_CREATED)
 
     @action(
@@ -487,12 +531,23 @@ class AuthenticationViewSet(viewsets.GenericViewSet):
         url_path="accept-invite",
         permission_classes=[AllowAny],
     )
+    @swagger_auto_schema(
+        operation_description="Accept an invitation",
+        request_body=AcceptInviteSerializer,
+        responses={
+            200: openapi.Response(description="Invitation accepted successfully"),
+            400: openapi.Response(description="Bad request"),
+            401: openapi.Response(description="Unauthorized"),
+        },
+    )
     def accept_invite(self, request):
         """Accept an invitation."""
         serializer = AcceptInviteSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         token = serializer.validated_data["token"]
         password = serializer.validated_data["password"]
+        first_name = serializer.validated_data["first_name"]
+        last_name = serializer.validated_data["last_name"]
 
         invite = get_object_or_404(Invite, token=token, is_used=False)
         if invite.expires_at < timezone.now():
@@ -501,9 +556,13 @@ class AuthenticationViewSet(viewsets.GenericViewSet):
         if User.objects.filter(email__iexact=invite.email).exists():
             return Response({"error": "User already exists"}, status=400)
 
-        user = User.objects.create(email=invite.email)
-        user.set_password(password)
-        user.save()
+        user = User.objects.create_user(
+            email=invite.email, 
+            password=password,
+            first_name=first_name,
+            last_name=last_name
+        )
+        
         EmailAddress.objects.create(user=user, email=user.email, is_primary=True, is_verified=True)
         if invite.roles.exists():
             user.roles.set(invite.roles.all())
@@ -527,7 +586,7 @@ class AuthenticationViewSet(viewsets.GenericViewSet):
         detail=False,
         methods=["delete"],
         url_path="users/(?P<user_id>[^/.]+)",
-        permission_classes=[IsAuthenticated, HasScopes],
+        permission_classes=[IsAuthenticated, UserPermissions.CanDeleteUser],
     )
     def remove_user(self, request, user_id=None):
         """Deactivate a user account."""

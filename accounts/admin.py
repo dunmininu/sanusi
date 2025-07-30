@@ -1,4 +1,3 @@
-
 from django.contrib import admin
 
 from .models import ModulePermission, Role
@@ -13,4 +12,3 @@ class ModulePermissionAdmin(admin.ModelAdmin):
 class RoleAdmin(admin.ModelAdmin):
     list_display = ("name", "is_owner")
     filter_horizontal = ("permissions",)
-

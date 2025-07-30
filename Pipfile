@@ -4,7 +4,8 @@ verify_ssl = true
 name = "pypi"
 
 [packages]
-decouple = "*"
+pyautogen = "*"
+python-decouple = "*"
 
 [dev-packages]
 black = "*"

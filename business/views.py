@@ -20,6 +20,11 @@ import django_filters
 
 from sanusi_backend.decorators.telemetry import with_telemetry
 from sanusi_backend.utils.error_handler import ErrorHandler, LogicException
+from sanusi_backend.permissions import (
+    BusinessPermissions, ProductPermissions, OrderPermissions, 
+    CategoryPermissions, HasScopes
+)
+from accounts.cache import CachedUserPermissionManager
 
 from .models import Business, Product, Category, Order
 from business.private.models import KnowledgeBase, EscalationDepartment
@@ -45,10 +50,25 @@ class BusinessApiViewSet(viewsets.ModelViewSet):
     queryset = Business.objects.all()
     serializer_class = BusinessSerializer
     lookup_field = "company_id"
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, BusinessPermissions.CanViewBusiness]
+
+    def get_permissions(self):
+        """Return different permissions based on the action."""
+        if self.action == 'create':
+            return [IsAuthenticated, BusinessPermissions.CanCreateBusiness]
+        elif self.action in ['update', 'partial_update']:
+            return [IsAuthenticated, BusinessPermissions.CanUpdateBusiness]
+        elif self.action == 'destroy':
+            return [IsAuthenticated, BusinessPermissions.CanDeleteBusiness]
+        return [IsAuthenticated, BusinessPermissions.CanViewBusiness]
 
     def get_object(self):
-        return get_object_or_404(Business, id=self.kwargs.get("company_id"))
+        # Get company_id from URL and filter business by it
+        company_id = self.kwargs.get("company_id")
+        return get_object_or_404(
+            Business,
+            company_id=company_id,
+        )
 
     @transaction.atomic
     @with_telemetry(span_name="create_business")
@@ -74,16 +94,15 @@ class BusinessApiViewSet(viewsets.ModelViewSet):
 
             # Set success attributes using the current span
             if current_span:
-                current_span.set_attributes({
-                    "business.id": str(serializer.instance.id),
-                    "operation.success": True
-                })
-                
+                current_span.set_attributes(
+                    {"business.id": str(serializer.instance.id), "operation.success": True}
+                )
+
             # Log success
             logger.info(
                 "Business created successfully",
                 business_id=str(serializer.instance.id),
-                user_id=str(request.user.id)
+                user_id=str(request.user.id),
             )
 
             headers = self.get_success_headers(serializer.data)
@@ -158,16 +177,15 @@ class BusinessApiViewSet(viewsets.ModelViewSet):
 
             # Set success attributes using the current span
             if current_span:
-                current_span.set_attributes({
-                    "business.id": str(serializer.instance.id),
-                    "operation.success": True
-                })
-                
+                current_span.set_attributes(
+                    {"business.id": str(serializer.instance.id), "operation.success": True}
+                )
+
             # Log success
             logger.info(
                 "Business update successfully",
                 business_id=str(serializer.instance.id),
-                user_id=str(request.user.id)
+                user_id=str(request.user.id),
             )
             return Response(serializer.data, status=status.HTTP_200_OK)
         except Exception as e:
@@ -210,7 +228,17 @@ class KnowledgeBaseViewSet(
     serializer_class = KnowledgeBaseSerializer
     filter_backends = [filters.SearchFilter]
     search_fields = ["is_company_description"]
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, BusinessPermissions.CanViewBusiness]
+
+    def get_permissions(self):
+        """Return different permissions based on the action."""
+        if self.action == 'create':
+            return [IsAuthenticated, BusinessPermissions.CanCreateBusiness]
+        elif self.action in ['update', 'update_knowledge_base']:
+            return [IsAuthenticated, BusinessPermissions.CanUpdateBusiness]
+        elif self.action in ['destroy', 'delete_knowledgebase']:
+            return [IsAuthenticated, BusinessPermissions.CanDeleteBusiness]
+        return [IsAuthenticated, BusinessPermissions.CanViewBusiness]
 
     def perform_update(self, serializer):
         serializer.save()
@@ -351,7 +379,7 @@ class KnowledgeBaseViewSet(
 
 class SanusiBusinessViewSet(mixins.CreateModelMixin, viewsets.GenericViewSet):
     serializer_class = SanusiBusinessCreateSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, BusinessPermissions.CanCreateBusiness]
 
     @transaction.atomic
     def create(self, request):
@@ -411,48 +439,27 @@ class ProductFilter(BaseSearchFilter):
     class Meta(BaseSearchFilter.Meta):
         model = Product
         fields = BaseSearchFilter.Meta.fields + [
-            'category', 
-            'category__name', 
-            'serial_number', 
-            'status',
-            'is_active',
-            'out_of_stock',
-            'low_in_stock'
-            ]
+            "name",
+            "serial_number",
+            "category__name",
+            "category__id",
+            "status",
+            "is_active",
+            "out_of_stock",
+            "low_in_stock",
+        ]
+
 
 # Add custom relation filters
-ProductFilter.add_relation_filter(
-    'category', 
-    'category__id', 
-    lookup_expr='exact', 
-    filter_class=NumberFilter
-)
-ProductFilter.add_relation_filter('category__name', 'category__name')
-ProductFilter.add_relation_filter('serial_number', 'serial_number')
-ProductFilter.add_relation_filter(
-    'status', 
-    'status', 
-    lookup_expr='exact', 
-    filter_class=CharFilter
-)
-ProductFilter.add_relation_filter(
-    'out_of_stock', 
-    'out_of_stock', 
-    lookup_expr='exact', 
-    filter_class=BooleanFilter
-)
-ProductFilter.add_relation_filter(
-    'is_active', 
-    'is_active', 
-    lookup_expr='exact', 
-    filter_class=BooleanFilter
-)
-ProductFilter.add_relation_filter(
-    'low_in_stock', 
-    'low_in_stock', 
-    lookup_expr='exact', 
-    filter_class=BooleanFilter
-)
+ProductFilter.add_relation_filter("name", "name")
+ProductFilter.add_relation_filter("serial_number", "serial_number")
+ProductFilter.add_relation_filter("category_name", "category__name")
+ProductFilter.add_relation_filter("category_id", "category__id")
+ProductFilter.add_relation_filter("status", "status")
+ProductFilter.add_relation_filter("is_active", "is_active")
+ProductFilter.add_relation_filter("out_of_stock", "out_of_stock")
+ProductFilter.add_relation_filter("low_in_stock", "low_in_stock")
+
 
 class InventoryViewSet(
     mixins.ListModelMixin,
@@ -464,7 +471,17 @@ class InventoryViewSet(
     queryset = Product.objects.all()
     serializer_class = InventorySerializer
     lookup_field = "id"
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, ProductPermissions.CanViewProduct]
+
+    def get_permissions(self):
+        """Return different permissions based on the action."""
+        if self.action == 'create':
+            return [IsAuthenticated, ProductPermissions.CanCreateProduct]
+        elif self.action in ['update', 'partial_update']:
+            return [IsAuthenticated, ProductPermissions.CanUpdateProduct]
+        elif self.action == 'destroy':
+            return [IsAuthenticated, ProductPermissions.CanDeleteProduct]
+        return [IsAuthenticated, ProductPermissions.CanViewProduct]
 
     def get_object(self):
         # Get company_id from URL and filter products by it
@@ -477,14 +494,14 @@ class InventoryViewSet(
             has_expiry_date=Case(
                 When(expiry_date__isnull=False, then=Value(True)),
                 default=Value(False),
-                output_field=BooleanField()
+                output_field=BooleanField(),
             )
         )
 
         # Order by:
         # 1. has_expiry_date descending (True first, so non-null comes first)
         # 2. expiry_date ascending (soonest expiry comes first)
-        return queryset.order_by('-has_expiry_date', 'expiry_date')
+        return queryset.order_by("-has_expiry_date", "expiry_date")
 
     filter_backends = [
         django_filters.rest_framework.DjangoFilterBackend,
@@ -493,17 +510,24 @@ class InventoryViewSet(
     ]
     filterset_class = ProductFilter
     search_fields = [
-        'name', 
-        'serial_number', 
-        'category__name', 
-        'category__id',
-        'status',
-        'is_active',
-        'out_of_stock',
-        'low_in_stock'
-        ]
-    ordering_fields = ['expiry_date', 'date_created', 'last_updated', 'name', 'serial_number', 'category__name']
-    ordering = ['-date_created']  # Default ordering
+        "name",
+        "serial_number",
+        "category__name",
+        "category__id",
+        "status",
+        "is_active",
+        "out_of_stock",
+        "low_in_stock",
+    ]
+    ordering_fields = [
+        "expiry_date",
+        "date_created",
+        "last_updated",
+        "name",
+        "serial_number",
+        "category__name",
+    ]
+    ordering = ["-date_created"]  # Default ordering
     pagination_class = CustomPagination
 
     def get_queryset(self):
@@ -529,9 +553,9 @@ class InventoryViewSet(
         - ordering: Order by field (prefix with - for descending)
         - page: Page number
         - page_size: Number of items per page (max 100)
-        - is_active: 
+        - is_active:
         - out_of_stock:
-        - low_in_stock: 
+        - low_in_stock:
         """
         return super().list(request, *args, **kwargs)
 
@@ -553,7 +577,7 @@ class InventoryViewSet(
                 user_email=request.user.email,
                 data_keys=list(safe_data.keys()),
             )
-            
+
             serializer = self.get_serializer(data=request.data)
             serializer.is_valid(raise_exception=True)
             self.perform_create(serializer)
@@ -593,7 +617,6 @@ class InventoryViewSet(
                 {"error": f"Unexpected error creating product: {str(e)}"},
                 status=HTTP_400_BAD_REQUEST,
             )
-            
 
     @transaction.atomic
     @with_telemetry(span_name="update_product")
@@ -667,14 +690,13 @@ class InventoryViewSet(
         """
         try:
             instance = self.get_object()
-            
+
             # Check if already soft deleted
             if instance.is_deleted:
                 return Response(
-                    {"error": "Product has already been deleted"},
-                    status=status.HTTP_404_NOT_FOUND
+                    {"error": "Product has already been deleted"}, status=status.HTTP_404_NOT_FOUND
                 )
-            
+
             # Log deletion attempt
             logger.info(
                 "Soft deleting product",
@@ -683,11 +705,11 @@ class InventoryViewSet(
                 user_id=str(request.user.id),
                 user_email=request.user.email,
             )
-            
+
             # Perform soft delete
             instance.is_deleted = True
-            instance.save(update_fields=['is_deleted'])
-            
+            instance.save(update_fields=["is_deleted"])
+
             # Set success attributes using the current span
             if current_span:
                 current_span.set_attributes(
@@ -697,19 +719,18 @@ class InventoryViewSet(
                         "operation.type": "soft_delete",
                     }
                 )
-            
+
             # Log success
             logger.info(
                 "Product soft deleted successfully",
                 product_id=str(instance.id),
                 user_id=str(request.user.id),
             )
-            
+
             return Response(
-                {"message": "Product deleted successfully"},
-                status=status.HTTP_204_NO_CONTENT
+                {"message": "Product deleted successfully"}, status=status.HTTP_204_NO_CONTENT
             )
-            
+
         except Exception as e:
             # Handle unexpected exceptions
             ErrorHandler.log_and_raise(
@@ -739,7 +760,17 @@ class CategoryViewSet(
     queryset = Category.objects.all()
     serializer_class = CategorySerializer
     lookup_field = "id"
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, CategoryPermissions.CanViewCategory]
+
+    def get_permissions(self):
+        """Return different permissions based on the action."""
+        if self.action == 'create':
+            return [IsAuthenticated, CategoryPermissions.CanCreateCategory]
+        elif self.action in ['update', 'partial_update']:
+            return [IsAuthenticated, CategoryPermissions.CanUpdateCategory]
+        elif self.action == 'destroy':
+            return [IsAuthenticated, CategoryPermissions.CanDeleteCategory]
+        return [IsAuthenticated, CategoryPermissions.CanViewCategory]
 
     def get_object(self):
         # Get company_id from URL and filter cat by it
@@ -939,7 +970,17 @@ class OrderViewSet(
     )
     serializer_class = OrderSerializer
     lookup_field = "id"
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, OrderPermissions.CanViewOrder]
+
+    def get_permissions(self):
+        """Return different permissions based on the action."""
+        if self.action == 'create':
+            return [IsAuthenticated, OrderPermissions.CanCreateOrder]
+        elif self.action in ['update', 'partial_update']:
+            return [IsAuthenticated, OrderPermissions.CanUpdateOrder]
+        elif self.action == 'destroy':
+            return [IsAuthenticated, OrderPermissions.CanDeleteOrder]
+        return [IsAuthenticated, OrderPermissions.CanViewOrder]
 
     def get_object(self):
         # Get company_id from URL and filter orders by it
@@ -1130,10 +1171,11 @@ class OrderViewSet(
                 {"error": f"Unexpected error updating order: {str(e)}"},
                 status=HTTP_400_BAD_REQUEST,
             )
-            
+
 
 class BusinessCustomerStatsView(viewsets.ViewSet):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, HasScopes]
+    required_scopes = ['analytics.view']
 
     @with_telemetry(span_name="customer_statistics")
     @action(detail=False, methods=["get"], url_path="customer-statistics")
@@ -1159,9 +1201,9 @@ class BusinessCustomerStatsView(viewsets.ViewSet):
             if not business:
                 ErrorHandler.validation_error(
                     message="User does not have a business.",
-                    field="business_id", 
+                    field="business_id",
                     error_code="NO_DEFAULT_BUSINESS",
-                    extra_data={"user_id": user.id}
+                    extra_data={"user_id": user.id},
                 )
                 return Response(
                     {"error": "No default business found."},
@@ -1169,7 +1211,7 @@ class BusinessCustomerStatsView(viewsets.ViewSet):
                 )
 
             stats = get_customer_statistics(business)
-             # Set success attributes using the current span
+            # Set success attributes using the current span
             if current_span:
                 current_span.set_attributes(
                     {
@@ -1205,7 +1247,8 @@ class BusinessCustomerStatsView(viewsets.ViewSet):
 
 
 class BusinessProductStatsView(viewsets.ViewSet):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, HasScopes]
+    required_scopes = ['analytics.view']
 
     @with_telemetry(span_name="product_statistics")
     @action(detail=False, methods=["get"], url_path="product-statistics")
@@ -1231,9 +1274,9 @@ class BusinessProductStatsView(viewsets.ViewSet):
             if not business:
                 ErrorHandler.validation_error(
                     message="User does not have a business.",
-                    field="business_id", 
+                    field="business_id",
                     error_code="NO_DEFAULT_BUSINESS",
-                    extra_data={"user_id": user.id}
+                    extra_data={"user_id": user.id},
                 )
                 return Response(
                     {"error": "No default business found."},
@@ -1241,7 +1284,7 @@ class BusinessProductStatsView(viewsets.ViewSet):
                 )
 
             stats = get_product_statistics(business)
-             # Set success attributes using the current span
+            # Set success attributes using the current span
             if current_span:
                 current_span.set_attributes(
                     {
@@ -1277,7 +1320,8 @@ class BusinessProductStatsView(viewsets.ViewSet):
 
 
 class BusinessOrderStatsView(viewsets.ViewSet):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, HasScopes]
+    required_scopes = ['analytics.view']
 
     @with_telemetry(span_name="order_statistics")
     @action(detail=False, methods=["get"], url_path="order-statistics")
@@ -1303,9 +1347,9 @@ class BusinessOrderStatsView(viewsets.ViewSet):
             if not business:
                 ErrorHandler.validation_error(
                     message="User does not have a business.",
-                    field="business_id", 
+                    field="business_id",
                     error_code="NO_DEFAULT_BUSINESS",
-                    extra_data={"user_id": user.id}
+                    extra_data={"user_id": user.id},
                 )
                 return Response(
                     {"error": "No default business found."},
@@ -1313,7 +1357,7 @@ class BusinessOrderStatsView(viewsets.ViewSet):
                 )
 
             stats = get_order_statistics(business)
-             # Set success attributes using the current span
+            # Set success attributes using the current span
             if current_span:
                 current_span.set_attributes(
                     {

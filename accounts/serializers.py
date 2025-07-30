@@ -70,9 +70,7 @@ class RegisterSerializer(serializers.Serializer):
         user.set_password(password)
         validate_user_password_attribute_similarity(password, user)
         user.save()
-        EmailAddress.objects.create(
-            user=user, email=user.email, is_primary=True, is_verified=False
-        )
+        EmailAddress.objects.create(user=user, email=user.email, is_primary=True, is_verified=False)
 
         return user
 
@@ -81,6 +79,7 @@ class UserSerializer(serializers.ModelSerializer):
     onboarding_progress = serializers.SerializerMethodField()
     onboarding_completion_percentage = serializers.ReadOnlyField()
     roles = serializers.SerializerMethodField()
+
     class Meta:
         model = User
         fields = [
@@ -92,9 +91,9 @@ class UserSerializer(serializers.ModelSerializer):
             "is_active",
             "businesses",
             "settings",
-            "step", 
+            "step",
             "complete_on_boarding",
-            "onboarding_progress", 
+            "onboarding_progress",
             "onboarding_completion_percentage",
             "roles",
         ]
@@ -106,6 +105,7 @@ class UserSerializer(serializers.ModelSerializer):
             "is_active",
             "businesses",
         ]
+
     def get_onboarding_progress(self, obj):
         return obj.get_onboarding_progress()
 
@@ -140,9 +140,11 @@ class LoginSerializer(serializers.Serializer):
                 raise serializers.ValidationError("User account is disabled.")
 
         return attrs
-    
+
+
 class OnboardingUpdateSerializer(serializers.Serializer):
     step = serializers.IntegerField(min_value=1, max_value=7)
+
 
 class OnboardingProgressSerializer(serializers.Serializer):
     current_step = serializers.IntegerField()
@@ -154,12 +156,12 @@ class OnboardingProgressSerializer(serializers.Serializer):
 
 class InviteSerializer(serializers.Serializer):
     email = serializers.EmailField()
-    roles = serializers.ListField(
-        child=serializers.UUIDField(), required=False, allow_empty=True
-    )
+    roles = serializers.ListField(child=serializers.UUIDField(), required=False, allow_empty=True)
     message = serializers.CharField(required=False, allow_blank=True)
 
 
 class AcceptInviteSerializer(serializers.Serializer):
     token = serializers.CharField()
     password = serializers.CharField(write_only=True)
+    first_name = serializers.CharField(required=True, min_length=3)
+    last_name = serializers.CharField(required=True, min_length=3)

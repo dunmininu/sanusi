@@ -16,9 +16,7 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name="product",
             name="serial_number",
-            field=models.CharField(
-                blank=True, db_index=True, max_length=200, null=True
-            ),
+            field=models.CharField(blank=True, db_index=True, max_length=200, null=True),
         ),
         migrations.AddConstraint(
             model_name="product",

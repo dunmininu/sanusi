@@ -7,11 +7,7 @@ app_name = "chat"
 
 router = routers.DefaultRouter()
 router.register("chat", ChatViewSet, basename="chat")
-router.register(
-    r"business/(?P<company_id>[^/]+)/customers", 
-    CustomerViewSet, 
-    basename="customer"
-)
+router.register(r"business/(?P<company_id>[^/]+)/customers", CustomerViewSet, basename="customer")
 
 # urlpatterns = [
 #     # Your other URL patterns...

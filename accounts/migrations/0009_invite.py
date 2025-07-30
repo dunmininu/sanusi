@@ -44,9 +44,7 @@ class Migration(migrations.Migration):
                 ),
                 (
                     "roles",
-                    models.ManyToManyField(
-                        blank=True, related_name="invites", to="accounts.role"
-                    ),
+                    models.ManyToManyField(blank=True, related_name="invites", to="accounts.role"),
                 ),
             ],
         ),

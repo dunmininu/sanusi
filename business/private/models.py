@@ -1,7 +1,6 @@
 from django.db import models
 
 
-
 class EscalationDepartment(models.Model):
     name = models.CharField(max_length=50)
     # business = models.ForeignKey(

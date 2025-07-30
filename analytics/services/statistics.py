@@ -4,7 +4,7 @@ from django.utils.timezone import now
 from django.db.models.functions import Cast
 from decimal import Decimal
 from chat.models import Customer
-from business.models import Product, Order 
+from business.models import Product, Order
 
 
 def get_customer_statistics(business):
@@ -34,27 +34,27 @@ def get_customer_statistics(business):
 
     # Customer spend in last 3 months
     recent_orders = business.order_business.filter(date_created__gte=three_months_ago)
-    total_spend = recent_orders.aggregate(
-        total=Sum(Cast(F("payment_summary__total"), FloatField()))
-    )["total"] or 0
-    average_customer_value = (
-        total_spend / active_customers_count if active_customers_count else 0
+    total_spend = (
+        recent_orders.aggregate(total=Sum(Cast(F("payment_summary__total"), FloatField())))["total"]
+        or 0
     )
+    average_customer_value = total_spend / active_customers_count if active_customers_count else 0
 
     # Customer spend last month
     last_month_orders = business.order_business.filter(
         date_created__range=(last_month_start, last_month_end)
     )
-    last_month_spend = last_month_orders.aggregate(
-        total=Sum(Cast(F("payment_summary__total"), FloatField()))
-    )["total"] or 0
+    last_month_spend = (
+        last_month_orders.aggregate(total=Sum(Cast(F("payment_summary__total"), FloatField())))[
+            "total"
+        ]
+        or 0
+    )
 
     # Compare this month's spend to last month's
     spend_change_percentage = 0
     if last_month_spend > 0:
-        spend_change_percentage = (
-            (total_spend - last_month_spend) / last_month_spend * 100
-        )
+        spend_change_percentage = (total_spend - last_month_spend) / last_month_spend * 100
 
     return {
         "total_customers": total_customers,
@@ -83,6 +83,7 @@ def get_product_statistics(business):
         "average_product_value": round(float(avg_price), 2),
     }
 
+
 def get_order_statistics(business):
     today = now().date()
     start_of_month = today.replace(day=1)
@@ -104,18 +105,24 @@ def get_order_statistics(business):
     pending_orders = orders.filter(status="PENDING").count()
 
     # 4. Revenue MTD (Month-to-Date)
-    current_revenue = current_month_orders.aggregate(
-        total=Sum(Cast(F("payment_summary__total"), FloatField()))
-    )["total"] or 0
+    current_revenue = (
+        current_month_orders.aggregate(total=Sum(Cast(F("payment_summary__total"), FloatField())))[
+            "total"
+        ]
+        or 0
+    )
 
     # 5. Revenue Last Month
     last_month_orders = orders.filter(
         date_created__gte=last_month_start,
         date_created__lte=last_month_end,
     )
-    last_month_revenue = last_month_orders.aggregate(
-        total=Sum(Cast(F("payment_summary__total"), FloatField()))
-    )["total"] or 0
+    last_month_revenue = (
+        last_month_orders.aggregate(total=Sum(Cast(F("payment_summary__total"), FloatField())))[
+            "total"
+        ]
+        or 0
+    )
 
     # 6. Revenue percentage change
     if last_month_revenue > 0:
@@ -140,10 +147,10 @@ def get_order_statistics(business):
         "average_order_value": round(float(average_order_value), 2),
     }
 
+
 # def get_business_dashboard_statistics(business):
 #     return {
 #         "product_stats": get_product_statistics(business),
 #         "customer_stats": get_customer_statistics(business),
 #         "order_stats": get_order_statistics(business),
 #     }
-
