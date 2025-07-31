@@ -77,6 +77,7 @@ INSTALLED_APPS = (
     "crispy_forms",
     "crispy_bootstrap4",
     "corsheaders",
+    "django_extensions",
     "accounts",
     "sanusi",
     "chat",

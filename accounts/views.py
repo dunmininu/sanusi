@@ -148,7 +148,7 @@ class AuthenticationViewSet(viewsets.GenericViewSet):
             password = serializer.validated_data["password"]
 
             # Authenticate user
-            user = authenticate(request, username=email, password=password)
+            user = authenticate(request, username=email.lower(), password=password)
 
             if user:
                 if not user.is_active:

@@ -132,12 +132,12 @@ class CustomerViewSet(
     def get_permissions(self):
         """Return different permissions based on the action."""
         if self.action == 'create':
-            return [IsAuthenticated, CustomerPermissions.CanCreateCustomer]
+            return [IsAuthenticated(), CustomerPermissions.CanCreateCustomer()]
         elif self.action in ['update', 'partial_update']:
-            return [IsAuthenticated, CustomerPermissions.CanUpdateCustomer]
+            return [IsAuthenticated(), CustomerPermissions.CanUpdateCustomer()]
         elif self.action == 'destroy':
-            return [IsAuthenticated, CustomerPermissions.CanDeleteCustomer]
-        return [IsAuthenticated, CustomerPermissions.CanViewCustomer]
+            return [IsAuthenticated(), CustomerPermissions.CanDeleteCustomer()]
+        return [IsAuthenticated(), CustomerPermissions.CanViewCustomer()]
 
     def get_queryset(self):
         queryset = super().get_queryset()
@@ -345,14 +345,14 @@ class ChatViewSet(viewsets.GenericViewSet):
     def get_permissions(self):
         """Return different permissions based on the action."""
         if self.action == 'create_chat':
-            return [IsAuthenticated, ChatPermissions.CanCreateChat]
+            return [IsAuthenticated(), ChatPermissions.CanCreateChat()]
         elif self.action == 'delete_chat':
-            return [IsAuthenticated, ChatPermissions.CanDeleteChat]
+            return [IsAuthenticated(), ChatPermissions.CanDeleteChat()]
         elif self.action in ['end_chat', 'toggle_chat_status', 'toggle_sanusi']:
-            return [IsAuthenticated, ChatPermissions.CanUpdateChat]
+            return [IsAuthenticated(), ChatPermissions.CanUpdateChat()]
         elif self.action == 'send_message':
-            return [IsAuthenticated, ChatPermissions.CanRespondToChat]
-        return [IsAuthenticated, ChatPermissions.CanViewChat]
+            return [IsAuthenticated(), ChatPermissions.CanRespondToChat()]
+        return [IsAuthenticated(), ChatPermissions.CanViewChat()]
 
     @transaction.atomic
     @swagger_auto_schema(request_body=CreateChatRequestSerializer)

@@ -55,12 +55,12 @@ class BusinessApiViewSet(viewsets.ModelViewSet):
     def get_permissions(self):
         """Return different permissions based on the action."""
         if self.action == 'create':
-            return [IsAuthenticated, BusinessPermissions.CanCreateBusiness]
+            return [IsAuthenticated(), BusinessPermissions.CanCreateBusiness()]
         elif self.action in ['update', 'partial_update']:
-            return [IsAuthenticated, BusinessPermissions.CanUpdateBusiness]
+            return [IsAuthenticated(), BusinessPermissions.CanUpdateBusiness()]
         elif self.action == 'destroy':
-            return [IsAuthenticated, BusinessPermissions.CanDeleteBusiness]
-        return [IsAuthenticated, BusinessPermissions.CanViewBusiness]
+            return [IsAuthenticated(), BusinessPermissions.CanDeleteBusiness()]
+        return [IsAuthenticated(), BusinessPermissions.CanViewBusiness()]
 
     def get_object(self):
         # Get company_id from URL and filter business by it
@@ -233,12 +233,12 @@ class KnowledgeBaseViewSet(
     def get_permissions(self):
         """Return different permissions based on the action."""
         if self.action == 'create':
-            return [IsAuthenticated, BusinessPermissions.CanCreateBusiness]
+            return [IsAuthenticated(), BusinessPermissions.CanCreateBusiness()]
         elif self.action in ['update', 'update_knowledge_base']:
-            return [IsAuthenticated, BusinessPermissions.CanUpdateBusiness]
+            return [IsAuthenticated(), BusinessPermissions.CanUpdateBusiness()]
         elif self.action in ['destroy', 'delete_knowledgebase']:
-            return [IsAuthenticated, BusinessPermissions.CanDeleteBusiness]
-        return [IsAuthenticated, BusinessPermissions.CanViewBusiness]
+            return [IsAuthenticated(), BusinessPermissions.CanDeleteBusiness()]
+        return [IsAuthenticated(), BusinessPermissions.CanViewBusiness()]
 
     def perform_update(self, serializer):
         serializer.save()
@@ -476,12 +476,12 @@ class InventoryViewSet(
     def get_permissions(self):
         """Return different permissions based on the action."""
         if self.action == 'create':
-            return [IsAuthenticated, ProductPermissions.CanCreateProduct]
+            return [IsAuthenticated(), ProductPermissions.CanCreateProduct()]
         elif self.action in ['update', 'partial_update']:
-            return [IsAuthenticated, ProductPermissions.CanUpdateProduct]
+            return [IsAuthenticated(), ProductPermissions.CanUpdateProduct()]
         elif self.action == 'destroy':
-            return [IsAuthenticated, ProductPermissions.CanDeleteProduct]
-        return [IsAuthenticated, ProductPermissions.CanViewProduct]
+            return [IsAuthenticated(), ProductPermissions.CanDeleteProduct()]
+        return [IsAuthenticated(), ProductPermissions.CanViewProduct()]
 
     def get_object(self):
         # Get company_id from URL and filter products by it
@@ -765,12 +765,12 @@ class CategoryViewSet(
     def get_permissions(self):
         """Return different permissions based on the action."""
         if self.action == 'create':
-            return [IsAuthenticated, CategoryPermissions.CanCreateCategory]
+            return [IsAuthenticated(), CategoryPermissions.CanCreateCategory()]
         elif self.action in ['update', 'partial_update']:
-            return [IsAuthenticated, CategoryPermissions.CanUpdateCategory]
+            return [IsAuthenticated(), CategoryPermissions.CanUpdateCategory()]
         elif self.action == 'destroy':
-            return [IsAuthenticated, CategoryPermissions.CanDeleteCategory]
-        return [IsAuthenticated, CategoryPermissions.CanViewCategory]
+            return [IsAuthenticated(), CategoryPermissions.CanDeleteCategory()]
+        return [IsAuthenticated(), CategoryPermissions.CanViewCategory()]
 
     def get_object(self):
         # Get company_id from URL and filter cat by it
@@ -975,12 +975,12 @@ class OrderViewSet(
     def get_permissions(self):
         """Return different permissions based on the action."""
         if self.action == 'create':
-            return [IsAuthenticated, OrderPermissions.CanCreateOrder]
+            return [IsAuthenticated(), OrderPermissions.CanCreateOrder()]
         elif self.action in ['update', 'partial_update']:
-            return [IsAuthenticated, OrderPermissions.CanUpdateOrder]
+            return [IsAuthenticated(), OrderPermissions.CanUpdateOrder()]
         elif self.action == 'destroy':
-            return [IsAuthenticated, OrderPermissions.CanDeleteOrder]
-        return [IsAuthenticated, OrderPermissions.CanViewOrder]
+            return [IsAuthenticated(), OrderPermissions.CanDeleteOrder()]
+        return [IsAuthenticated(), OrderPermissions.CanViewOrder()]
 
     def get_object(self):
         # Get company_id from URL and filter orders by it

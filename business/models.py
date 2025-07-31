@@ -51,6 +51,16 @@ class Business(BaseModel):
     #     default=uuid.uuid4, unique=True, db_index=True, primary_key=True
     # )
 
+    # Business owner - the primary user who owns this business
+    owner = models.ForeignKey(
+        'accounts.User',
+        on_delete=models.CASCADE,
+        related_name='owned_businesses',
+        null=True,
+        blank=True,
+        help_text="The primary owner of this business"
+    )
+
     # Business name
     name = models.CharField(max_length=200, db_index=True)
     business_type = models.CharField(
@@ -97,6 +107,39 @@ class Business(BaseModel):
 
     def __str__(self):
         return self.name
+
+    @property
+    def owner_email(self):
+        """Get the owner's email address"""
+        return self.owner.email if self.owner else None
+
+    def is_owned_by(self, user):
+        """Check if the business is owned by the given user"""
+        return self.owner == user
+
+    def get_owner_permissions(self):
+        """Get all permissions that the owner should have for this business"""
+        if not self.owner:
+            return []
+        
+        # Business owners should have all permissions
+        from accounts.models import Permissions
+        return [
+            Permissions.BUSINESS_VIEW, Permissions.BUSINESS_CREATE, 
+            Permissions.BUSINESS_UPDATE, Permissions.BUSINESS_DELETE,
+            Permissions.CUSTOMER_VIEW, Permissions.CUSTOMER_CREATE,
+            Permissions.CUSTOMER_UPDATE, Permissions.CUSTOMER_DELETE,
+            Permissions.PRODUCT_VIEW, Permissions.PRODUCT_CREATE,
+            Permissions.PRODUCT_UPDATE, Permissions.PRODUCT_DELETE,
+            Permissions.PRODUCT_MANAGE_INVENTORY,
+            Permissions.ORDER_VIEW, Permissions.ORDER_CREATE,
+            Permissions.ORDER_UPDATE, Permissions.ORDER_DELETE,
+            Permissions.ORDER_PROCESS,
+            Permissions.CHAT_VIEW, Permissions.CHAT_CREATE,
+            Permissions.CHAT_UPDATE, Permissions.CHAT_DELETE,
+            Permissions.CHAT_RESPOND,
+            Permissions.ANALYTICS_VIEW, Permissions.ANALYTICS_EXPORT,
+        ]
 
 
 class Subscription(BaseModel):

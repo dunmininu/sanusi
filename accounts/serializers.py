@@ -66,7 +66,7 @@ class RegisterSerializer(serializers.Serializer):
         first_name = self.validated_data["first_name"]
         last_name = self.validated_data["last_name"]
 
-        user = User(email=email, first_name=first_name, last_name=last_name)
+        user = User(email=email.lower(), first_name=first_name, last_name=last_name)
         user.set_password(password)
         validate_user_password_attribute_similarity(password, user)
         user.save()
